@@ -1,11 +1,37 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const path = require('path');
+const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 let CACHE = { items: [], lastFetch: 0 };
 const H48 = 48*60*60*1000;
 const H6  = 6*60*60*1000;
+const CACHE_FILE = path.join(__dirname, '.cache.json');
+
+function loadCacheFromDisk() {
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const raw = fs.readFileSync(CACHE_FILE, 'utf8');
+      const saved = JSON.parse(raw);
+      // Only restore items that are still within 48h window
+      const fresh = (saved.items || []).filter(i => Date.now() - i.seenAt <= H48);
+      if (fresh.length) {
+        CACHE.items = fresh;
+        CACHE.lastFetch = saved.lastFetch || 0;
+        console.log(`[Cache] Restored ${fresh.length} items from disk`);
+      }
+    }
+  } catch(e) { console.error('[Cache] Load error:', e.message); }
+}
+
+function saveCacheToDisk() {
+  try {
+    fs.writeFileSync(CACHE_FILE, JSON.stringify({ items: CACHE.items, lastFetch: CACHE.lastFetch }));
+  } catch(e) { console.error('[Cache] Save error:', e.message); }
+}
+
+loadCacheFromDisk();
 
 app.use(express.static(path.join(__dirname,'static')));
 app.use(express.static(path.join(__dirname)));
@@ -190,6 +216,7 @@ async function fetchAll(){
   CACHE.lastFetch = Date.now();
   const counts = { Reddit: reddit.length, 'Google Trends': google.length, 'Hacker News': hn.length, 'Dev.to': devto.length, 'X Trends': xtrends.length };
   console.log(`[${new Date().toLocaleTimeString()}] Fetched:`, counts, '| Total cache:', CACHE.items.length);
+  saveCacheToDisk();
 }
 fetchAll();
 setInterval(fetchAll, 60000);
