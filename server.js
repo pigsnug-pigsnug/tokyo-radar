@@ -119,53 +119,41 @@ function merge(ex,fr){
 }
 
 async function fetchXTrends() {
-  // Try multiple sources for X/Twitter trends
-  const sources = [
-    // trends24.in — HTML scrape
-    async () => {
-      const res = await fetch('https://trends24.in/united-states/', {
-        headers: { 'User-Agent': CHROME_UA, 'Accept': 'text/html,*/*', 'Accept-Language': 'en-US,en;q=0.9' },
-        redirect: 'follow'
-      });
-      if (!res.ok) throw new Error('trends24 ' + res.status);
-      const html = await res.text();
-      const items = [];
-      // trends24 uses <ol class="trend-card__list"> with <a> tags
-      const cardRx = /<ol[^>]*class="[^"]*trend-card__list[^"]*"[^>]*>([\s\S]*?)<\/ol>/gi;
-      let cardMatch = cardRx.exec(html);
-      if (!cardMatch) throw new Error('trends24 no card found');
-      const listHtml = cardMatch[1];
-      const aRx = /<a[^>]*>([^<]+)<\/a>/gi;
-      let m; let rank = 1;
-      while ((m = aRx.exec(listHtml)) !== null && rank <= 25) {
-        const title = m[1].trim();
-        if (title && title.length > 1) {
-          items.push({ platform: 'X Trends', title, meta: '#' + rank + ' on X', url: 'https://x.com/search?q=' + encodeURIComponent(title) + '&src=trend_click', tags: ['x'], score: 0, seenAt: Date.now(), lastSeen: Date.now() });
-          rank++;
-        }
-      }
-      if (!items.length) throw new Error('trends24 parsed 0 items');
-      return items;
-    },
-    // twittrends.com JSON API
-    async () => {
-      const res = await fetch('https://twittrends.com/api/trends?country=US&lang=en', {
-        headers: { 'User-Agent': CHROME_UA }, redirect: 'follow'
-      });
-      if (!res.ok) throw new Error('twittrends ' + res.status);
-      const json = await res.json();
-      const trends = json.trends || json.data || json;
-      if (!Array.isArray(trends)) throw new Error('twittrends bad format');
-      return trends.slice(0, 25).map((t, i) => ({
-        platform: 'X Trends', title: t.name || t.query || t, meta: '#' + (i+1) + ' on X' + (t.tweet_volume ? ' · ' + Number(t.tweet_volume).toLocaleString() + ' tweets' : ''),
-        url: 'https://x.com/search?q=' + encodeURIComponent(t.name || t.query || t) + '&src=trend_click',
-        tags: ['x'], score: 0, seenAt: Date.now(), lastSeen: Date.now()
-      }));
-    }
+  // Use Nitter public instances — lightweight Twitter frontend with RSS
+  const nitterHosts = [
+    'https://nitter.poast.org',
+    'https://nitter.privacyredirect.com',
+    'https://nitter.tiekoetter.com',
+    'https://nitter.1d4.us',
+    'https://nitter.kavin.rocks',
   ];
-  for (const src of sources) {
-    try { const items = await src(); if (items.length) return items; } catch(e) { console.error('X Trends source error:', e.message); }
+  for (const host of nitterHosts) {
+    try {
+      const res = await fetch(`${host}/search/rss?f=tweets&q=%23trending+OR+%23viral&since_id=0`, {
+        headers: { 'User-Agent': CHROME_UA, 'Accept': 'application/rss+xml,text/xml,*/*' },
+        redirect: 'follow',
+        signal: AbortSignal.timeout(5000)
+      });
+      if (!res.ok) { console.error(`Nitter ${host} => ${res.status}`); continue; }
+      const xml = await res.text();
+      const entries = parseXmlItems(xml, 'item');
+      if (!entries.length) continue;
+      const seen = new Set();
+      const items = [];
+      for (const e of entries) {
+        const title = getTag(e, 'title').replace(/@\w+:\s*/, '').replace(/#/g, '').trim();
+        const link = getTag(e, 'link');
+        const pub = getTag(e, 'pubDate');
+        const seenAt = pub ? new Date(pub).getTime() : Date.now();
+        if (!title || title.length < 3 || seen.has(title.toLowerCase())) continue;
+        seen.add(title.toLowerCase());
+        items.push({ platform: 'X Trends', title, meta: 'Trending on X', url: link || 'https://x.com/search?q=' + encodeURIComponent(title), tags: ['x'], score: 0, seenAt: isNaN(seenAt) ? Date.now() : seenAt, lastSeen: Date.now() });
+        if (items.length >= 20) break;
+      }
+      if (items.length) { console.log(`X Trends OK via ${host}: ${items.length} items`); return items; }
+    } catch(e) { console.error(`Nitter ${host} error:`, e.message); }
   }
+  console.error('X Trends: all sources failed');
   return [];
 }
 
