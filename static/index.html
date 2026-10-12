@@ -412,13 +412,35 @@ function pulseInit(){
 }
 
 // Client-side Reddit fetch (browser IP, not blocked)
+function corsGet(url){
+  // Try multiple CORS proxies in order until one works
+  var proxies=[
+    'https://corsproxy.io/?'+encodeURIComponent(url),
+    'https://api.allorigins.win/get?url='+encodeURIComponent(url),
+    'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(url),
+  ];
+  var i=0;
+  function tryNext(){
+    if(i>=proxies.length)return Promise.reject('all proxies failed');
+    var p=proxies[i++];
+    return fetch(p).then(function(r){
+      if(!r.ok)throw new Error(r.status);
+      return r.text().then(function(t){
+        // allorigins wraps in {contents:...}, others return raw
+        if(p.includes('allorigins')){try{return JSON.parse(t).contents||t}catch(e){return t}}
+        return t;
+      });
+    }).catch(function(){return tryNext();});
+  }
+  return tryNext();
+}
+
 function pulseClientReddit(){
-  var proxy='https://api.allorigins.win/get?url=';
   var feeds=['https://www.reddit.com/r/popular.json?limit=25','https://www.reddit.com/r/technology.json?limit=15','https://www.reddit.com/r/worldnews.json?limit=15'];
   var H48=48*3600*1000;
   return Promise.allSettled(feeds.map(function(u){
-    return fetch(proxy+encodeURIComponent(u)).then(function(r){return r.json()}).then(function(d){
-      var body=typeof d.contents==='string'?JSON.parse(d.contents):d.contents;
+    return corsGet(u).then(function(text){
+      var body=typeof text==='string'?JSON.parse(text):text;
       return (body&&body.data&&body.data.children)||[];
     });
   })).then(function(results){
@@ -436,12 +458,9 @@ function pulseClientReddit(){
   }).catch(function(){return[];});
 }
 
-// Client-side Google Trends fetch (browser IP, not blocked)
 function pulseClientGoogleTrends(){
-  var proxy='https://api.allorigins.win/get?url=';
   var url='https://trends.google.com/trends/trendingsearches/daily/rss?geo=US';
-  return fetch(proxy+encodeURIComponent(url)).then(function(r){return r.json()}).then(function(d){
-    var xml=d.contents||'';
+  return corsGet(url).then(function(xml){
     var items=[];
     var rx=/<item>([\s\S]*?)<\/item>/g;var m;
     while((m=rx.exec(xml))!==null){
