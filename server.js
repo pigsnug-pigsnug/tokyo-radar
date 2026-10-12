@@ -119,20 +119,48 @@ function merge(ex,fr){
 }
 
 async function fetchXTrends() {
-  // Use Nitter public instances — lightweight Twitter frontend with RSS
-  const nitterHosts = [
-    'https://nitter.poast.org',
-    'https://nitter.privacyredirect.com',
-    'https://nitter.tiekoetter.com',
-    'https://nitter.1d4.us',
-    'https://nitter.kavin.rocks',
-  ];
+  const now = Date.now();
+
+  // Source 1: trends24.in — flexible HTML scrape
+  try {
+    const res = await fetch('https://trends24.in/united-states/', {
+      headers: { 'User-Agent': CHROME_UA, 'Accept': 'text/html,*/*', 'Accept-Language': 'en-US,en;q=0.9' },
+      redirect: 'follow', signal: AbortSignal.timeout(8000)
+    });
+    if (res.ok) {
+      const html = await res.text();
+      const items = [];
+      const seen = new Set();
+      // Try multiple selectors: href="/search?q=..." links, or any <a> inside trend containers
+      const patterns = [
+        /href="\/search\?q=([^"&]+)[^"]*"[^>]*>([^<]+)<\/a>/gi,
+        /<a[^>]+class="[^"]*trend[^"]*"[^>]*>([^<]+)<\/a>/gi,
+        /class="[^"]*trend[^"]*"[^>]*>\s*<a[^>]*>([^<]+)<\/a>/gi,
+        /<li[^>]*>\s*(?:<span[^>]*>\d+<\/span>\s*)?<a[^>]*>([^<]+)<\/a>/gi,
+      ];
+      for (const rx of patterns) {
+        let m; rx.lastIndex = 0;
+        while ((m = rx.exec(html)) !== null && items.length < 25) {
+          const title = (m[2] || m[1]).trim().replace(/&amp;/g,'&').replace(/&#\d+;/g,'').trim();
+          if (title.length < 2 || /^[\d\s]+$/.test(title) || seen.has(title.toLowerCase())) continue;
+          seen.add(title.toLowerCase());
+          const q = m[1] && m[1] !== title ? decodeURIComponent(m[1]) : title;
+          items.push({ platform: 'X Trends', title, meta: '#' + items.length+1 + ' on X', url: 'https://x.com/search?q=' + encodeURIComponent(q) + '&src=trend_click', tags: ['x'], score: 0, seenAt: now, lastSeen: now });
+        }
+        if (items.length >= 10) break;
+      }
+      if (items.length) { console.log(`X Trends OK via trends24.in: ${items.length} items`); return items; }
+      console.error('X Trends trends24.in: reached but parsed 0 items');
+    } else { console.error('X Trends trends24.in:', res.status); }
+  } catch(e) { console.error('X Trends trends24.in error:', e.message); }
+
+  // Source 2: Nitter public instances RSS
+  const nitterHosts = ['https://nitter.poast.org','https://nitter.privacyredirect.com','https://nitter.tiekoetter.com','https://nitter.1d4.us'];
   for (const host of nitterHosts) {
     try {
-      const res = await fetch(`${host}/search/rss?f=tweets&q=%23trending+OR+%23viral&since_id=0`, {
+      const res = await fetch(`${host}/search/rss?f=tweets&q=%23trending&since_id=0`, {
         headers: { 'User-Agent': CHROME_UA, 'Accept': 'application/rss+xml,text/xml,*/*' },
-        redirect: 'follow',
-        signal: AbortSignal.timeout(5000)
+        redirect: 'follow', signal: AbortSignal.timeout(5000)
       });
       if (!res.ok) { console.error(`Nitter ${host} => ${res.status}`); continue; }
       const xml = await res.text();
@@ -141,18 +169,17 @@ async function fetchXTrends() {
       const seen = new Set();
       const items = [];
       for (const e of entries) {
-        const title = getTag(e, 'title').replace(/@\w+:\s*/, '').replace(/#/g, '').trim();
+        const title = getTag(e, 'title').replace(/@\w+:\s*/, '').replace(/#(\w)/g,'$1').trim().slice(0,100);
         const link = getTag(e, 'link');
-        const pub = getTag(e, 'pubDate');
-        const seenAt = pub ? new Date(pub).getTime() : Date.now();
         if (!title || title.length < 3 || seen.has(title.toLowerCase())) continue;
         seen.add(title.toLowerCase());
-        items.push({ platform: 'X Trends', title, meta: 'Trending on X', url: link || 'https://x.com/search?q=' + encodeURIComponent(title), tags: ['x'], score: 0, seenAt: isNaN(seenAt) ? Date.now() : seenAt, lastSeen: Date.now() });
+        items.push({ platform: 'X Trends', title, meta: 'Trending on X', url: link || 'https://x.com/search?q='+encodeURIComponent(title), tags: ['x'], score: 0, seenAt: now, lastSeen: now });
         if (items.length >= 20) break;
       }
       if (items.length) { console.log(`X Trends OK via ${host}: ${items.length} items`); return items; }
     } catch(e) { console.error(`Nitter ${host} error:`, e.message); }
   }
+
   console.error('X Trends: all sources failed');
   return [];
 }
