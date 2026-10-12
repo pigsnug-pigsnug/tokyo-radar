@@ -8,6 +8,7 @@ const H48 = 48*60*60*1000;
 const H6  = 6*60*60*1000;
 
 app.use(express.static(path.join(__dirname,'static')));
+app.use(express.static(path.join(__dirname)));
 
 async function fetchReddit() {
   try {
