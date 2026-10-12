@@ -83,6 +83,17 @@ a{color:inherit}
 .pulse-item-meta{font-size:12px;color:var(--muted);font-family:var(--mono)}
 .pulse-empty{text-align:center;padding:60px 20px;color:var(--muted)}
 .pulse-spinner{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--muted);font-family:var(--mono);font-size:13px}
+/* search */
+.pulse-search-wrap{display:flex;align-items:center;background:var(--panel);border:1px solid var(--line2);border-radius:8px;padding:0 10px;gap:6px;flex:1;min-width:200px;max-width:360px;transition:border-color .15s}
+.pulse-search-wrap:focus-within{border-color:var(--brand)}
+.pulse-search-icon{color:var(--muted);font-size:15px;flex-shrink:0;line-height:1}
+.pulse-search{border:none;background:transparent;outline:none;font-family:var(--body);font-size:13px;color:var(--ink);padding:7px 0;flex:1;min-width:0}
+.pulse-search::placeholder{color:var(--muted)}
+.pulse-search-clear{border:none;background:transparent;color:var(--muted);font-size:13px;cursor:pointer;padding:0;line-height:1;flex-shrink:0}
+.pulse-search-clear:hover{color:var(--ink)}
+/* highlight matched text */
+.pulse-match{background:rgba(209,15,34,.13);color:var(--brand-text);border-radius:2px;padding:0 1px}
+.pulse-search-info{font-size:12px;color:var(--muted);font-family:var(--mono);padding:8px 20px;border-bottom:1px solid var(--line)}
 .pulse-item-actions{display:flex;align-items:center;gap:6px;margin-top:6px}
 .launch-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:4px;border:1px solid #00E650;background:rgba(0,230,80,.08);color:#00E650;font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer;transition:all .15s;letter-spacing:.3px}
 .launch-btn:hover{background:#00E650;color:#000}
@@ -277,6 +288,11 @@ tr:last-child td{border-bottom:none}
 <!-- ── PULSE PANEL ── -->
 <div id="pulse-panel" class="tab-panel active">
   <div class="pulse-toolbar">
+    <div class="pulse-search-wrap">
+      <span class="pulse-search-icon">⌕</span>
+      <input type="text" id="pulse-search" class="pulse-search" placeholder="Search anything you've seen…" oninput="setPulseSearch(this.value)" autocomplete="off" spellcheck="false">
+      <button class="pulse-search-clear" id="pulse-search-clear" onclick="clearPulseSearch()" style="display:none">✕</button>
+    </div>
     <div class="pulse-filter-group" id="pulse-filters">
       <button class="active" onclick="setPulseFilter('all',this)">All</button>
       <button onclick="setPulseFilter('Reddit',this)">Reddit</button>
@@ -478,6 +494,7 @@ function appInit(){
 var pulseData={all_items:[],now_items:[]};
 var pulseFilter='all';
 var pulseTime='all';
+var pulseSearch='';
 var pulseTimer=null;
 var pulsePage=0;
 var PULSE_PAGE_SIZE=200;
@@ -559,7 +576,7 @@ function pulseLoadMore(){
   if(sentinel)sentinel.remove();
   next.forEach(function(i){
     var div=document.createElement('div');
-    div.innerHTML=pulseItemHtml(i);
+    div.innerHTML=pulseItemHtml(i,pulseSearch);
     el.appendChild(div.firstChild);
   });
   if(rendered+next.length<items.length){
@@ -570,9 +587,31 @@ function pulseLoadMore(){
   }
 }
 
+function setPulseSearch(val){
+  pulseSearch=val.trim();
+  var clearBtn=document.getElementById('pulse-search-clear');
+  if(clearBtn)clearBtn.style.display=pulseSearch?'':'none';
+  pulsePage=0;
+  pulseRender();
+}
+function clearPulseSearch(){
+  pulseSearch='';
+  var inp=document.getElementById('pulse-search');
+  if(inp)inp.value='';
+  var clearBtn=document.getElementById('pulse-search-clear');
+  if(clearBtn)clearBtn.style.display='none';
+  pulsePage=0;
+  pulseRender();
+}
 function pulseFilteredItems(){
   var items=(pulseTime==='now'?pulseData.now_items:pulseData.all_items)||[];
   if(pulseFilter!=='all')items=items.filter(function(i){return i.platform===pulseFilter});
+  if(pulseSearch){
+    var q=pulseSearch.toLowerCase();
+    items=items.filter(function(i){
+      return (i.title||'').toLowerCase().includes(q)||(i.meta||'').toLowerCase().includes(q)||(i.platform||'').toLowerCase().includes(q);
+    });
+  }
   return items;
 }
 
@@ -596,7 +635,7 @@ function pulseBadge(p){
   var label=p==='X Trends'?'𝕏':p==='Hacker News'?'HN':p;
   return '<span class="pulse-item-badge '+cls+'">'+label+'</span>';
 }
-function pulseItemHtml(i){
+function pulseItemHtml(i,q){
   var ago=i.seenAt?Math.round((Date.now()-i.seenAt)/60000)+'m ago':'';
   var viral=isViral(i);
   var viralTag=viral?'<span class="viral-badge">🔥 VIRAL</span>':'';
@@ -606,15 +645,37 @@ function pulseItemHtml(i){
   var launchBtn='<button class="launch-btn" onclick="openLaunchModal(\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+escHtml(i.platform||'')+'\')">🚀 Launch</button>';
   var isSaved=savedHas(i.url||i.title);
   var saveBtn='<button class="save-btn'+(isSaved?' saved':'')+'" id="sbtn-'+savedBtnId(i.url||i.title)+'" onclick="savedToggle(this,\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+escHtml(i.platform||'')+'\')\">'+(isSaved?'⭐ Saved':'☆ Save')+'</button>';
-  return '<div class="pulse-item'+(viral?' viral':'')+'">'+pulseBadge(i.platform)+'<div class="pulse-item-body"><div class="pulse-item-title"><a href="'+i.url+'" target="_blank" rel="noopener">'+escHtml(i.title)+'</a>'+viralTag+'</div><div class="pulse-item-meta">'+escHtml(i.meta||'')+'&nbsp;·&nbsp;'+ago+'</div><div class="pulse-item-actions">'+launchBtn+saveBtn+'</div></div></div>';
+  var titleHtml=q?highlightMatch(i.title,q):escHtml(i.title);
+  var metaHtml=q?highlightMatch(i.meta||'',q):escHtml(i.meta||'');
+  return '<div class="pulse-item'+(viral?' viral':'')+'">'+pulseBadge(i.platform)+'<div class="pulse-item-body"><div class="pulse-item-title"><a href="'+i.url+'" target="_blank" rel="noopener">'+titleHtml+'</a>'+viralTag+'</div><div class="pulse-item-meta">'+metaHtml+'&nbsp;·&nbsp;'+ago+'</div><div class="pulse-item-actions">'+launchBtn+saveBtn+'</div></div></div>';
+}
+function highlightMatch(text,q){
+  if(!q)return escHtml(text);
+  var safe=escHtml(text);
+  var safeQ=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return safe.replace(new RegExp('('+safeQ+')','gi'),'<span class="pulse-match">$1</span>');
 }
 function pulseRender(){
   var items=pulseFilteredItems();
   var el=document.getElementById('pulse-list');
   if(!el)return;
-  if(!items.length){el.innerHTML='<div class="pulse-empty">No items yet — data loads in ~30s</div>';return}
+  // Remove old search info banner
+  var old=document.getElementById('pulse-search-info');
+  if(old)old.remove();
+  if(!items.length){
+    el.innerHTML='<div class="pulse-empty">'+(pulseSearch?'No results for "'+escHtml(pulseSearch)+'" — try a different word':'No items yet — data loads in ~30s')+'</div>';
+    return;
+  }
+  // Show search result count
+  if(pulseSearch){
+    var info=document.createElement('div');
+    info.id='pulse-search-info';
+    info.className='pulse-search-info';
+    info.textContent=items.length+' result'+(items.length===1?'':'s')+' for "'+pulseSearch+'"';
+    el.parentNode.insertBefore(info,el);
+  }
   var first=items.slice(0,PULSE_PAGE_SIZE);
-  el.innerHTML=first.map(pulseItemHtml).join('');
+  el.innerHTML=first.map(function(i){return pulseItemHtml(i,pulseSearch);}).join('');
   if(items.length>PULSE_PAGE_SIZE){
     var s=document.createElement('div');
     s.className='pulse-sentinel';
