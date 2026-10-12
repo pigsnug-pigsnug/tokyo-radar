@@ -1,4 +1,3 @@
-
 const express = require('express');
 const fetch = require('node-fetch');
 const path = require('path');
@@ -13,26 +12,32 @@ app.use(express.static(path.join(__dirname)));
 
 async function fetchReddit() {
   try {
+    // Use RSS feeds which are less blocked than JSON API
     const feeds = [
-      'https://www.reddit.com/r/popular/new.json?limit=25&raw_json=1',
-      'https://www.reddit.com/r/all/rising.json?limit=25&raw_json=1',
-      'https://www.reddit.com/r/worldnews+technology+science+business/new.json?limit=25&raw_json=1'
+      'https://www.reddit.com/r/popular.rss?limit=25',
+      'https://www.reddit.com/r/technology.rss?limit=25',
+      'https://www.reddit.com/r/worldnews.rss?limit=25',
     ];
     const HEADERS = {
-      'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept':'application/json',
-      'Accept-Language':'en-US,en;q=0.9',
+      'User-Agent':'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+      'Accept':'application/rss+xml,application/xml,text/xml,*/*',
     };
-    const results = await Promise.allSettled(feeds.map(u=>fetch(u,{headers:HEADERS,redirect:'follow'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()})));
+    const results = await Promise.allSettled(feeds.map(u=>fetch(u,{headers:HEADERS,redirect:'follow'}).then(r=>r.text())));
     const items = [];
-    for (const r of results) {
-      if (r.status!=='fulfilled') continue;
-      for (const c of (r.value?.data?.children||[])) {
-        const d = c.data;
-        if (!d?.title) continue;
-        const t = d.created_utc*1000;
-        if (Date.now()-t > H48) continue;
-        items.push({platform:'Reddit',title:d.title,meta:`r/${d.subreddit} · ${(d.ups||0).toLocaleString()} ups · ${(d.num_comments||0).toLocaleString()} comments`,url:`https://reddit.com${d.permalink}`,tags:[d.subreddit].filter(Boolean),score:(d.ups||0)+(d.num_comments||0),seenAt:t,lastSeen:Date.now()});
+    for(const r of results){
+      if(r.status!=='fulfilled') continue;
+      const xml=r.value;
+      const entries=[...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)];
+      for(const m of entries){
+        const b=m[1];
+        const title=b.match(/<title[^>]*>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[(.*?)\]\]>/,'$1')?.trim();
+        const link=b.match(/<link[^>]*href="([^"]+)"/)?.[1]||b.match(/<link[^>]*>(.*?)<\/link>/)?.[1]?.trim();
+        const updated=b.match(/<updated>(.*?)<\/updated>/)?.[1]?.trim();
+        const t=updated?new Date(updated).getTime():Date.now();
+        const cat=b.match(/<category[^>]*term="([^"]+)"/)?.[1]||'reddit';
+        if(title&&!isNaN(t)&&Date.now()-t<=H48){
+          items.push({platform:'Reddit',title,meta:`r/${cat}`,url:link||'https://reddit.com',tags:[cat],score:0,seenAt:t,lastSeen:Date.now()});
+        }
       }
     }
     return items;
@@ -53,29 +58,38 @@ async function fetchHN() {
 
 async function fetchGoogle() {
   try {
-    const res = await fetch('https://trends.google.com/trends/trendingsearches/daily/rss?geo=US',{
-      headers:{
-        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language':'en-US,en;q=0.9',
-        'Cache-Control':'no-cache',
-      },
-      redirect:'follow'
-    });
-    if(!res.ok) throw new Error(res.status);
-    const xml = await res.text();
-    const items=[];const rx=/<item>([\s\S]*?)<\/item>/g;let m;
-    while((m=rx.exec(xml))!==null){
-      const b=m[1];
-      const title=(b.match(/<title><!\[CDATA\[(.*?)\]\]>/)||b.match(/<title>(.*?)<\/title>/))?.[1]?.trim();
-      const traffic=b.match(/<ht:approx_traffic>(.*?)<\/ht:approx_traffic>/)?.[1]?.trim();
-      const link=b.match(/<link>(.*?)<\/link>/)?.[1]?.trim();
-      const pub=b.match(/<pubDate>(.*?)<\/pubDate>/)?.[1]?.trim();
-      const t=pub?new Date(pub).getTime():Date.now();
-      if(title) items.push({platform:'Google Trends',title,meta:`~${traffic||'N/A'} searches`,url:link||`https://trends.google.com/trends/explore?q=${encodeURIComponent(title)}`,tags:['trending'],score:parseInt((traffic||'0').replace(/[^0-9]/g,''))||0,seenAt:isNaN(t)?Date.now():t,lastSeen:Date.now()});
+    // Use multiple fallback trending sources
+    const sources = [
+      // Bing News RSS - works from cloud, covers trending topics
+      'https://feeds.feedburner.com/TechCrunch',
+      // Yahoo Finance trending - works from cloud
+      'https://finance.yahoo.com/news/rssindex',
+    ];
+    const items = [];
+    for (const url of sources) {
+      try {
+        const res = await fetch(url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)', 'Accept': 'application/rss+xml,text/xml,*/*' },
+          redirect: 'follow'
+        });
+        if (!res.ok) continue;
+        const xml = await res.text();
+        const rx = /<item>([\s\S]*?)<\/item>/g; let m;
+        while ((m = rx.exec(xml)) !== null) {
+          const b = m[1];
+          const title = (b.match(/<title><!\[CDATA\[(.*?)\]\]>/) || b.match(/<title>(.*?)<\/title>/))?.[1]?.trim();
+          const link = b.match(/<link>(.*?)<\/link>/)?.[1]?.trim() || b.match(/<link[^>]+href="([^"]+)"/)?.[1];
+          const pub = b.match(/<pubDate>(.*?)<\/pubDate>/)?.[1]?.trim();
+          const t = pub ? new Date(pub).getTime() : Date.now();
+          const platform = url.includes('TechCrunch') ? 'TechCrunch' : 'Yahoo Finance';
+          if (title && !isNaN(t) && Date.now() - t <= H48) {
+            items.push({ platform, title, meta: 'trending', url: link || url, tags: ['trending'], score: 0, seenAt: t, lastSeen: Date.now() });
+          }
+        }
+      } catch(e) { console.log('Feed error:', url, e.message); }
     }
-    return items.slice(0,20);
-  } catch(e){ return []; }
+    return items.slice(0, 30);
+  } catch(e){ console.log('Trends error:',e.message); return []; }
 }
 
 async function fetchDevTo() {
