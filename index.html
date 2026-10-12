@@ -449,62 +449,16 @@ function isViral(item){
   return false;
 }
 
-/* ── X Trends via trends24.in ── */
-function fetchXTrends(){
-  var proxies=[
-    'https://corsproxy.io/?'+encodeURIComponent('https://trends24.in/united-states/'),
-    'https://api.allorigins.win/get?url='+encodeURIComponent('https://trends24.in/united-states/')
-  ];
-  var i=0;
-  function tryNext(){
-    if(i>=proxies.length)return Promise.resolve([]);
-    var p=proxies[i++];
-    return fetch(p).then(function(r){
-      if(!r.ok)throw new Error(r.status);
-      return r.text();
-    }).then(function(t){
-      // allorigins wraps in JSON
-      if(p.includes('allorigins')){try{t=JSON.parse(t).contents||t}catch(e){}}
-      // Parse trending topics from trends24.in HTML
-      var items=[];
-      var now=Date.now();
-      // Match <a class="trend-name" ...>text</a> or li items with rank
-      var rx=/<a[^>]+class="[^"]*trend-link[^"]*"[^>]*>([^<]+)<\/a>/gi;
-      var m;var rank=1;
-      while((m=rx.exec(t))!==null&&rank<=25){
-        var title=m[1].trim();
-        if(title&&title.length>1){
-          items.push({platform:'X Trends',title:title,meta:'#'+rank+' on X',url:'https://x.com/search?q='+encodeURIComponent(title)+'&src=trend_click',tags:['x','twitter'],score:0,seenAt:now,lastSeen:now});
-          rank++;
-        }
-      }
-      // Fallback: match ol/li structure
-      if(!items.length){
-        var rx2=/<li[^>]*>\s*<a[^>]*href="[^"]*"[^>]*>([^<]+)<\/a>/gi;
-        while((m=rx2.exec(t))!==null&&rank<=25){
-          var title2=m[1].trim();
-          if(title2&&title2.length>1&&!title2.match(/^\d+$/)){
-            items.push({platform:'X Trends',title:title2,meta:'#'+rank+' on X',url:'https://x.com/search?q='+encodeURIComponent(title2)+'&src=trend_click',tags:['x','twitter'],score:0,seenAt:now,lastSeen:now});
-            rank++;
-          }
-        }
-      }
-      return items;
-    }).catch(function(){return tryNext();});
-  }
-  return tryNext();
-}
+/* X Trends fetched server-side via /api/trends — no client fetch needed */
 
 function pulseFetch(){
   var el=document.getElementById('pulse-status');
   if(el)el.textContent='Refreshing…';
   Promise.all([
-    fetch('/api/trends').then(function(r){return r.json()}).catch(function(){return{all_items:[],now_items:[],updated_at:0}}),
-    fetchXTrends()
+    fetch('/api/trends').then(function(r){return r.json()}).catch(function(){return{all_items:[],now_items:[],updated_at:0}})
   ]).then(function(results){
     var server=results[0];
-    var xtrends=results[1];
-    var combined=[].concat(server.all_items||[]).concat(xtrends);
+    var combined=[].concat(server.all_items||[]);
     var seen=new Map();
     combined.forEach(function(i){var k=(i.platform+'::'+i.title).toLowerCase();if(!seen.has(k))seen.set(k,i);});
     // Sort: viral items first, then by recency

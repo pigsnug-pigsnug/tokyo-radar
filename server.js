@@ -118,11 +118,62 @@ function merge(ex,fr){
   return Array.from(map.values()).filter(i=>Date.now()-i.seenAt<=H48).sort((a,b)=>b.seenAt-a.seenAt);
 }
 
+async function fetchXTrends() {
+  // Try multiple sources for X/Twitter trends
+  const sources = [
+    // trends24.in — HTML scrape
+    async () => {
+      const res = await fetch('https://trends24.in/united-states/', {
+        headers: { 'User-Agent': CHROME_UA, 'Accept': 'text/html,*/*', 'Accept-Language': 'en-US,en;q=0.9' },
+        redirect: 'follow'
+      });
+      if (!res.ok) throw new Error('trends24 ' + res.status);
+      const html = await res.text();
+      const items = [];
+      // trends24 uses <ol class="trend-card__list"> with <a> tags
+      const cardRx = /<ol[^>]*class="[^"]*trend-card__list[^"]*"[^>]*>([\s\S]*?)<\/ol>/gi;
+      let cardMatch = cardRx.exec(html);
+      if (!cardMatch) throw new Error('trends24 no card found');
+      const listHtml = cardMatch[1];
+      const aRx = /<a[^>]*>([^<]+)<\/a>/gi;
+      let m; let rank = 1;
+      while ((m = aRx.exec(listHtml)) !== null && rank <= 25) {
+        const title = m[1].trim();
+        if (title && title.length > 1) {
+          items.push({ platform: 'X Trends', title, meta: '#' + rank + ' on X', url: 'https://x.com/search?q=' + encodeURIComponent(title) + '&src=trend_click', tags: ['x'], score: 0, seenAt: Date.now(), lastSeen: Date.now() });
+          rank++;
+        }
+      }
+      if (!items.length) throw new Error('trends24 parsed 0 items');
+      return items;
+    },
+    // twittrends.com JSON API
+    async () => {
+      const res = await fetch('https://twittrends.com/api/trends?country=US&lang=en', {
+        headers: { 'User-Agent': CHROME_UA }, redirect: 'follow'
+      });
+      if (!res.ok) throw new Error('twittrends ' + res.status);
+      const json = await res.json();
+      const trends = json.trends || json.data || json;
+      if (!Array.isArray(trends)) throw new Error('twittrends bad format');
+      return trends.slice(0, 25).map((t, i) => ({
+        platform: 'X Trends', title: t.name || t.query || t, meta: '#' + (i+1) + ' on X' + (t.tweet_volume ? ' · ' + Number(t.tweet_volume).toLocaleString() + ' tweets' : ''),
+        url: 'https://x.com/search?q=' + encodeURIComponent(t.name || t.query || t) + '&src=trend_click',
+        tags: ['x'], score: 0, seenAt: Date.now(), lastSeen: Date.now()
+      }));
+    }
+  ];
+  for (const src of sources) {
+    try { const items = await src(); if (items.length) return items; } catch(e) { console.error('X Trends source error:', e.message); }
+  }
+  return [];
+}
+
 async function fetchAll(){
-  const [reddit, google, hn, devto] = await Promise.all([fetchReddit(), fetchGoogle(), fetchHN(), fetchDevTo()]);
-  CACHE.items = merge(CACHE.items, [...reddit, ...google, ...hn, ...devto]);
+  const [reddit, google, hn, devto, xtrends] = await Promise.all([fetchReddit(), fetchGoogle(), fetchHN(), fetchDevTo(), fetchXTrends()]);
+  CACHE.items = merge(CACHE.items, [...reddit, ...google, ...hn, ...devto, ...xtrends]);
   CACHE.lastFetch = Date.now();
-  const counts = { Reddit: reddit.length, 'Google Trends': google.length, 'Hacker News': hn.length, 'Dev.to': devto.length };
+  const counts = { Reddit: reddit.length, 'Google Trends': google.length, 'Hacker News': hn.length, 'Dev.to': devto.length, 'X Trends': xtrends.length };
   console.log(`[${new Date().toLocaleTimeString()}] Fetched:`, counts, '| Total cache:', CACHE.items.length);
 }
 fetchAll();
