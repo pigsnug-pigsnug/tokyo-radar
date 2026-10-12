@@ -83,6 +83,32 @@ a{color:inherit}
 .pulse-item-meta{font-size:12px;color:var(--muted);font-family:var(--mono)}
 .pulse-empty{text-align:center;padding:60px 20px;color:var(--muted)}
 .pulse-spinner{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--muted);font-family:var(--mono);font-size:13px}
+.pulse-item-actions{display:flex;align-items:center;gap:6px;margin-top:6px}
+.launch-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:4px;border:1px solid #00E650;background:rgba(0,230,80,.08);color:#00E650;font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer;transition:all .15s;letter-spacing:.3px}
+.launch-btn:hover{background:#00E650;color:#000}
+
+/* ── LAUNCH MODAL ── */
+#launch-modal{position:fixed;inset:0;z-index:9800;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(3px)}
+#launch-modal.open{display:flex}
+#launch-modal .lm-box{background:#0B0B0F;border:1px solid #2A2D38;border-radius:14px;width:min(540px,95vw);max-height:90vh;overflow-y:auto;padding:24px}
+#launch-modal .lm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+#launch-modal .lm-title{font-family:var(--display);font-size:18px;color:#E8EAF0;letter-spacing:.5px}
+#launch-modal .lm-close{background:transparent;border:none;color:#6B7280;font-size:20px;cursor:pointer;line-height:1}
+#launch-modal .lm-topic{font-size:12px;color:#6B7280;font-family:var(--mono);margin-bottom:18px;padding:8px 12px;background:#0F1015;border-radius:6px;border:1px solid #1C1E26;line-height:1.5}
+#launch-modal .lm-tweets{display:flex;flex-direction:column;gap:12px}
+#launch-modal .lm-tweet{background:#0F1015;border:1px solid #1C1E26;border-radius:10px;padding:14px;cursor:pointer;transition:border-color .15s;position:relative}
+#launch-modal .lm-tweet:hover{border-color:#2A2D38}
+#launch-modal .lm-tweet-text{font-size:13px;color:#E8EAF0;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+#launch-modal .lm-tweet-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid #1C1E26}
+#launch-modal .lm-chars{font-size:11px;color:#6B7280;font-family:var(--mono)}
+#launch-modal .lm-actions{display:flex;gap:8px}
+#launch-modal .lm-copy{padding:5px 12px;border-radius:6px;border:1px solid #2A2D38;background:transparent;color:#A0A8B8;font-size:11px;font-family:var(--mono);cursor:pointer;transition:all .15s}
+#launch-modal .lm-copy:hover{background:#1C1E26;color:#E8EAF0}
+#launch-modal .lm-copy.copied{border-color:#00E650;color:#00E650}
+#launch-modal .lm-post{padding:5px 12px;border-radius:6px;border:none;background:#1DA1F2;color:#fff;font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:opacity .15s}
+#launch-modal .lm-post:hover{opacity:.85}
+#launch-modal .lm-regen{margin-top:14px;width:100%;padding:8px;border-radius:8px;border:1px dashed #2A2D38;background:transparent;color:#6B7280;font-size:12px;font-family:var(--mono);cursor:pointer;transition:all .15s}
+#launch-modal .lm-regen:hover{border-color:#5A6AFF;color:#5A6AFF}
 
 /* ════════════════════════════════════════════
    RADAR TAB
@@ -315,6 +341,19 @@ tr:last-child td{border-bottom:none}
   <main class="desk-main" id="desk-main"></main>
 </div>
 
+<!-- ── LAUNCH MODAL ── -->
+<div id="launch-modal">
+  <div class="lm-box">
+    <div class="lm-header">
+      <span class="lm-title">🚀 LAUNCH THIS COIN</span>
+      <button class="lm-close" onclick="closeLaunchModal()">✕</button>
+    </div>
+    <div class="lm-topic" id="lm-topic-text"></div>
+    <div class="lm-tweets" id="lm-tweets"></div>
+    <button class="lm-regen" onclick="launchRegen()">⟳ Generate new variations</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -532,7 +571,11 @@ function pulseItemHtml(i){
   var ago=i.seenAt?Math.round((Date.now()-i.seenAt)/60000)+'m ago':'';
   var viral=isViral(i);
   var viralTag=viral?'<span class="viral-badge">🔥 VIRAL</span>':'';
-  return '<div class="pulse-item'+(viral?' viral':'')+'">'+pulseBadge(i.platform)+'<div class="pulse-item-body"><div class="pulse-item-title"><a href="'+i.url+'" target="_blank" rel="noopener">'+escHtml(i.title)+'</a>'+viralTag+'</div><div class="pulse-item-meta">'+escHtml(i.meta||'')+'&nbsp;·&nbsp;'+ago+'</div></div></div>';
+  var titleEnc=escHtml(i.title).replace(/'/g,'&#39;');
+  var metaEnc=escHtml(i.meta||'').replace(/'/g,'&#39;');
+  var urlEnc=escHtml(i.url||'').replace(/'/g,'&#39;');
+  var launchBtn='<button class="launch-btn" onclick="openLaunchModal(\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+escHtml(i.platform||'')+'\')">🚀 Launch</button>';
+  return '<div class="pulse-item'+(viral?' viral':'')+'">'+pulseBadge(i.platform)+'<div class="pulse-item-body"><div class="pulse-item-title"><a href="'+i.url+'" target="_blank" rel="noopener">'+escHtml(i.title)+'</a>'+viralTag+'</div><div class="pulse-item-meta">'+escHtml(i.meta||'')+'&nbsp;·&nbsp;'+ago+'</div><div class="pulse-item-actions">'+launchBtn+'</div></div></div>';
 }
 function pulseRender(){
   var items=pulseFilteredItems();
@@ -549,6 +592,138 @@ function pulseRender(){
   }
 }
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+/* ══════════════════════════════════════════════════════════
+   ████  LAUNCH MODAL — PUMP.FUN TWEET GENERATOR  ████
+   ══════════════════════════════════════════════════════════ */
+var _launchItem={title:'',meta:'',url:'',platform:''};
+
+function openLaunchModal(title,meta,url,platform){
+  _launchItem={title:title,meta:meta,url:url,platform:platform};
+  var topicEl=document.getElementById('lm-topic-text');
+  if(topicEl)topicEl.textContent='📌 '+title+(meta?' · '+meta:'');
+  launchGenerate();
+  document.getElementById('launch-modal').classList.add('open');
+}
+function closeLaunchModal(){
+  document.getElementById('launch-modal').classList.remove('open');
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLaunchModal();});
+document.getElementById('launch-modal').addEventListener('click',function(e){if(e.target===this)closeLaunchModal();});
+
+function launchRegen(){launchGenerate();}
+
+function launchGenerate(){
+  var tweets=generateLaunchTweets(_launchItem.title,_launchItem.meta,_launchItem.platform);
+  var el=document.getElementById('lm-tweets');
+  if(!el)return;
+  el.innerHTML=tweets.map(function(t,idx){
+    var chars=t.length;
+    var over=chars>280;
+    return '<div class="lm-tweet"><div class="lm-tweet-text">'+escHtml(t)+'</div><div class="lm-tweet-footer"><span class="lm-chars" style="'+(over?'color:#E5132B':'')+'">'+chars+'/280</span><div class="lm-actions"><button class="lm-copy" onclick="launchCopy(this,'+idx+')">Copy</button><a class="lm-post" href="https://twitter.com/intent/tweet?text='+encodeURIComponent(t)+'" target="_blank" rel="noopener">Post on 𝕏</a></div></div></div>';
+  }).join('');
+}
+
+function launchCopy(btn,idx){
+  var items=document.querySelectorAll('#lm-tweets .lm-tweet-text');
+  if(!items[idx])return;
+  var text=items[idx].textContent;
+  navigator.clipboard.writeText(text).then(function(){
+    btn.textContent='Copied!';btn.classList.add('copied');
+    setTimeout(function(){btn.textContent='Copy';btn.classList.remove('copied');},2000);
+  }).catch(function(){
+    var ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    btn.textContent='Copied!';btn.classList.add('copied');
+    setTimeout(function(){btn.textContent='Copy';btn.classList.remove('copied');},2000);
+  });
+}
+
+/* ── Tweet template engine ── */
+function generateLaunchTweets(title,meta,platform){
+  var coin=extractCoinName(title);
+  var hook=extractHook(title,platform);
+  var templates=shuffled([
+    genTweetA,genTweetB,genTweetC,genTweetD,genTweetE,genTweetF
+  ]);
+  return templates.slice(0,3).map(function(fn){return fn(coin,hook,title,meta,platform);});
+}
+
+function extractCoinName(title){
+  // grab first notable noun/proper noun from title — capitalize it, strip common words
+  var stop='the a an is are was were be been being have has had do does did will would could should may might shall of in on at to for with by from up about into through during including before after above below between among following across behind';
+  var stopSet={};stop.split(' ').forEach(function(w){stopSet[w]=1;});
+  var words=title.replace(/[^\w\s]/g,' ').split(/\s+/).filter(function(w){return w.length>2&&!stopSet[w.toLowerCase()]});
+  if(!words.length)return title.split(' ').slice(0,2).join('').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8)||'COIN';
+  // prefer uppercase acronyms or capitalised words
+  var upper=words.filter(function(w){return w===w.toUpperCase()&&w.length>1});
+  if(upper.length)return upper[0].slice(0,8);
+  return words[0].toUpperCase().slice(0,8);
+}
+
+function extractHook(title,platform){
+  // pull punchy fragment from title
+  var t=title.replace(/\s+/g,' ').trim();
+  if(t.length<=60)return t;
+  // try to cut at a natural point
+  var cuts=t.match(/^(.{20,60})[,.:!?]/);
+  if(cuts)return cuts[1].trim();
+  return t.slice(0,55)+'…';
+}
+
+function shuffled(arr){
+  var a=arr.slice();
+  for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var tmp=a[i];a[i]=a[j];a[j]=tmp;}
+  return a;
+}
+
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+
+function genTweetA(coin,hook,title,meta,platform){
+  var openers=['bro.','"'+hook+'"','did you see this?','okay hear me out.','not me finding the next coin on '+platform+'.'];
+  var middles=['this is literally $'+coin+' calling.','$'+coin+' was made for this moment.','the narrative just wrote itself.','the chart doesn\'t exist yet. that\'s the point.'];
+  var closers=['CA dropping soon 👀','who\'s early? 🫵','pump.fun. now.','follow for CA 🔥','this is the play.'];
+  return pick(openers)+'\n\n'+pick(middles)+'\n\n'+pick(closers);
+}
+
+function genTweetB(coin,hook,title,meta,platform){
+  var setups=['what if i told you','"'+hook+'" is trending',title.length<80?'"'+title+'"':'the news is moving'];
+  var punchlines=['and someone already launched $'+coin+' on pump.fun','and $'+coin+' doesn\'t have a coin yet','and we\'re still not launching $'+coin+'?','so naturally we launch $'+coin+''];
+  var endings=['gm 🚀','ser.','that\'s the tweet.','you in? 👇'];
+  return pick(setups)+'\n\n'+pick(punchlines)+'\n\n'+pick(endings);
+}
+
+function genTweetC(coin,hook,title,meta,platform){
+  var lines=[
+    hook,
+    '',
+    'this is not financial advice',
+    'this is a $'+coin+' announcement',
+    '',
+    'CA: coming 🔜',
+    'pump.fun 🟢'
+  ];
+  return lines.join('\n');
+}
+
+function genTweetD(coin,hook,title,meta,platform){
+  var intros=['BREAKING:','NOT FINANCIAL ADVICE BUT:','okay so','THREAD 🧵 (1/1):'];
+  var bodies=[
+    '"'+hook+'" is real\n\n$'+coin+' is the coin\n\npump.fun is the venue\n\nwe are so early',
+    '"'+hook+'" just dropped\n\nif this doesn\'t pump a meme coin idk what will\n\n$'+coin+' let\'s go',
+    'someone needs to launch $'+coin+'\n\n"'+hook+'"\n\nthe lore writes itself fr'
+  ];
+  return pick(intros)+'\n\n'+pick(bodies);
+}
+
+function genTweetE(coin,hook,title,meta,platform){
+  return 'i have found your next play\n\n"'+hook+'"\n\n$'+coin+' on pump.fun\n\nthe people who were early will not explain how they knew\n\nthey just knew 👁️';
+}
+
+function genTweetF(coin,hook,title,meta,platform){
+  var sources={'Reddit':'reddit was cooking','Google Trends':'google trends spotted','Hacker News':'hacker news is onto something','X Trends':'x is talking about it','Dev.to':'devs are onto this'};
+  var src=sources[platform]||'the internet noticed';
+  return src+' 👀\n\n"'+hook+'"\n\n$'+coin+'\n\nnot a shill. just a guy who reads the news.\n\nCA soon 🔒';
+}
 
 /* ══════════════════════════════════════════════════════════
    ████  RADAR TAB  ████
