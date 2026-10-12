@@ -57,23 +57,35 @@ async function fetchReddit() {
 }
 
 async function fetchGoogle() {
-  try {
-    const res = await fetch('https://trends.google.com/trends/trendingsearches/daily/rss?geo=US', {
-      headers: { 'User-Agent': CHROME_UA, 'Accept': 'text/xml,application/xml,*/*', 'Accept-Language': 'en-US,en;q=0.9' },
-      redirect: 'follow'
-    });
-    if (!res.ok) throw new Error(res.status);
-    const xml = await res.text();
-    const rawItems = parseXmlItems(xml, 'item');
-    return rawItems.map(item => {
-      const title = getTag(item, 'title');
-      const traffic = getTag(item, 'ht:approx_traffic') || getTag(item, 'approx_traffic') || '';
-      const link = getTag(item, 'link');
-      const pubDate = getTag(item, 'pubDate');
-      const seenAt = pubDate ? new Date(pubDate).getTime() : Date.now();
-      return { platform: 'Google Trends', title, meta: traffic ? `~${traffic} searches` : 'Trending', url: link || 'https://trends.google.com', tags: ['trending'], score: 0, seenAt: isNaN(seenAt) ? Date.now() : seenAt, lastSeen: Date.now() };
-    }).filter(i => i.title && Date.now() - i.seenAt <= H48);
-  } catch(e) { console.error('Google Trends error:', e.message); return []; }
+  // Try multiple Google Trends endpoints
+  const endpoints = [
+    'https://trends.google.com/trending/rss?geo=US',
+    'https://trends.google.com/trends/trendingsearches/realtime/rss?geo=US&cat=all',
+    'https://trends.google.com/trends/trendingsearches/daily/rss?geo=US&hl=en-US',
+  ];
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': CHROME_UA, 'Accept': 'text/xml,application/xml,*/*', 'Accept-Language': 'en-US,en;q=0.9', 'Referer': 'https://trends.google.com/' },
+        redirect: 'follow'
+      });
+      if (!res.ok) { console.error(`Google Trends ${url} => ${res.status}`); continue; }
+      const xml = await res.text();
+      const rawItems = parseXmlItems(xml, 'item');
+      if (!rawItems.length) continue;
+      const items = rawItems.map(item => {
+        const title = getTag(item, 'title');
+        const traffic = getTag(item, 'ht:approx_traffic') || getTag(item, 'approx_traffic') || '';
+        const link = getTag(item, 'link');
+        const pubDate = getTag(item, 'pubDate');
+        const seenAt = pubDate ? new Date(pubDate).getTime() : Date.now();
+        return { platform: 'Google Trends', title, meta: traffic ? `~${traffic} searches` : 'Trending', url: link || 'https://trends.google.com', tags: ['trending'], score: 0, seenAt: isNaN(seenAt) ? Date.now() : seenAt, lastSeen: Date.now() };
+      }).filter(i => i.title && Date.now() - i.seenAt <= H48);
+      console.log(`Google Trends OK via ${url}: ${items.length} items`);
+      return items;
+    } catch(e) { console.error(`Google Trends ${url} error:`, e.message); }
+  }
+  return [];
 }
 
 async function fetchHN() {
