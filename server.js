@@ -76,10 +76,13 @@ async function fetchGoogle() {
       const items = rawItems.map(item => {
         const title = getTag(item, 'title');
         const traffic = getTag(item, 'ht:approx_traffic') || getTag(item, 'approx_traffic') || '';
-        const link = getTag(item, 'link');
+        // Use first news article URL, falling back to a Google search for the trend
+        const newsUrl = getTag(item, 'ht:news_item_url');
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(title)}`;
+        const link = (newsUrl && newsUrl.startsWith('http')) ? newsUrl : searchUrl;
         const pubDate = getTag(item, 'pubDate');
         const seenAt = pubDate ? new Date(pubDate).getTime() : Date.now();
-        return { platform: 'Google Trends', title, meta: traffic ? `~${traffic} searches` : 'Trending', url: link || 'https://trends.google.com', tags: ['trending'], score: 0, seenAt: isNaN(seenAt) ? Date.now() : seenAt, lastSeen: Date.now() };
+        return { platform: 'Google Trends', title, meta: traffic ? `~${traffic} searches` : 'Trending', url: link, tags: ['trending'], score: 0, seenAt: isNaN(seenAt) ? Date.now() : seenAt, lastSeen: Date.now() };
       }).filter(i => i.title && Date.now() - i.seenAt <= H48);
       console.log(`Google Trends OK via ${url}: ${items.length} items`);
       return items;
