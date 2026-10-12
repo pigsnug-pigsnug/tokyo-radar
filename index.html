@@ -86,6 +86,20 @@ a{color:inherit}
 .pulse-item-actions{display:flex;align-items:center;gap:6px;margin-top:6px}
 .launch-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:4px;border:1px solid #00E650;background:rgba(0,230,80,.08);color:#00E650;font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer;transition:all .15s;letter-spacing:.3px}
 .launch-btn:hover{background:#00E650;color:#000}
+.save-btn{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:4px;border:1px solid var(--line2);background:transparent;color:var(--muted);font-size:11px;font-weight:600;font-family:var(--mono);cursor:pointer;transition:all .15s}
+.save-btn:hover{border-color:#FFD600;color:#FFD600}
+.save-btn.saved{border-color:#FFD600;background:rgba(255,214,0,.1);color:#FFD600}
+
+/* ── SAVED PANEL ── */
+#saved-panel{min-height:calc(100vh - var(--tab-h));background:var(--bg)}
+.saved-toolbar{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.saved-toolbar .sv-title{font-family:var(--display);font-size:15px;font-weight:900;letter-spacing:.5px}
+.saved-toolbar .sv-count{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.saved-toolbar .sv-clear{margin-left:auto;padding:4px 12px;border-radius:6px;border:1px solid var(--line2);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--mono)}
+.saved-toolbar .sv-clear:hover{border-color:var(--bad);color:var(--bad)}
+.saved-list{max-width:820px;margin:0 auto;padding:12px 20px}
+.saved-empty{text-align:center;padding:80px 20px;color:var(--muted);font-size:14px}
+.saved-empty span{display:block;font-size:32px;margin-bottom:12px}
 
 /* ── LAUNCH MODAL ── */
 #launch-modal{position:fixed;inset:0;z-index:9800;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(3px)}
@@ -254,6 +268,7 @@ tr:last-child td{border-bottom:none}
   <div class="tb-tabs">
     <button class="tb-tab active" onclick="switchTab('pulse')">Pulse</button>
     <button class="tb-tab" onclick="switchTab('radar')">Radar</button>
+    <button class="tb-tab" onclick="switchTab('saved')">Saved <span id="saved-tab-count" style="display:none;font-size:10px;background:var(--brand);color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
     <button class="tb-tab" onclick="switchTab('desk')">Desk</button>
   </div>
   <div class="tb-clock" id="ist-clock">--:--:-- IST</div>
@@ -327,6 +342,18 @@ tr:last-child td{border-bottom:none}
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ── SAVED PANEL ── -->
+<div id="saved-panel" class="tab-panel">
+  <div class="saved-toolbar">
+    <span class="sv-title">⭐ SAVED</span>
+    <span class="sv-count" id="saved-count">0 items</span>
+    <button class="sv-clear" onclick="savedClearAll()">Clear all</button>
+  </div>
+  <div class="saved-list" id="saved-list">
+    <div class="saved-empty"><span>⭐</span>Nothing saved yet.<br>Hit the bookmark on any Pulse item.</div>
   </div>
 </div>
 
@@ -411,15 +438,16 @@ window.addEventListener('keydown',function(e){
 var _activeTab='pulse';
 function switchTab(t){
   _activeTab=t;
+  var tabOrder=['pulse','radar','saved','desk'];
   document.querySelectorAll('.tb-tab').forEach(function(b,i){
-    b.classList.toggle('active',['pulse','radar','desk'][i]===t);
+    b.classList.toggle('active',tabOrder[i]===t);
   });
   document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
   var panel=document.getElementById(t+'-panel');
   if(panel)panel.classList.add('active');
-  // Desk needs grid display
   if(t==='desk'){panel.style.display='grid';}
   else if(panel){panel.style.display='';}
+  if(t==='saved')savedRender();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -441,6 +469,7 @@ function appInit(){
   pulseInit();
   radarInit();
   deskInit();
+  savedUpdateCount();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -575,7 +604,9 @@ function pulseItemHtml(i){
   var metaEnc=escHtml(i.meta||'').replace(/'/g,'&#39;');
   var urlEnc=escHtml(i.url||'').replace(/'/g,'&#39;');
   var launchBtn='<button class="launch-btn" onclick="openLaunchModal(\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+escHtml(i.platform||'')+'\')">🚀 Launch</button>';
-  return '<div class="pulse-item'+(viral?' viral':'')+'">'+pulseBadge(i.platform)+'<div class="pulse-item-body"><div class="pulse-item-title"><a href="'+i.url+'" target="_blank" rel="noopener">'+escHtml(i.title)+'</a>'+viralTag+'</div><div class="pulse-item-meta">'+escHtml(i.meta||'')+'&nbsp;·&nbsp;'+ago+'</div><div class="pulse-item-actions">'+launchBtn+'</div></div></div>';
+  var isSaved=savedHas(i.url||i.title);
+  var saveBtn='<button class="save-btn'+(isSaved?' saved':'')+'" id="sbtn-'+savedBtnId(i.url||i.title)+'" onclick="savedToggle(this,\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+escHtml(i.platform||'')+'\')\">'+(isSaved?'⭐ Saved':'☆ Save')+'</button>';
+  return '<div class="pulse-item'+(viral?' viral':'')+'">'+pulseBadge(i.platform)+'<div class="pulse-item-body"><div class="pulse-item-title"><a href="'+i.url+'" target="_blank" rel="noopener">'+escHtml(i.title)+'</a>'+viralTag+'</div><div class="pulse-item-meta">'+escHtml(i.meta||'')+'&nbsp;·&nbsp;'+ago+'</div><div class="pulse-item-actions">'+launchBtn+saveBtn+'</div></div></div>';
 }
 function pulseRender(){
   var items=pulseFilteredItems();
@@ -723,6 +754,71 @@ function genTweetF(coin,hook,title,meta,platform){
   var sources={'Reddit':'reddit was cooking','Google Trends':'google trends spotted','Hacker News':'hacker news is onto something','X Trends':'x is talking about it','Dev.to':'devs are onto this'};
   var src=sources[platform]||'the internet noticed';
   return src+' 👀\n\n"'+hook+'"\n\n$'+coin+'\n\nnot a shill. just a guy who reads the news.\n\nCA soon 🔒';
+}
+
+/* ══════════════════════════════════════════════════════════
+   ████  SAVED COLLECTION  ████
+   ══════════════════════════════════════════════════════════ */
+var _saved=[];
+try{var _sv=localStorage.getItem('tr_saved');if(_sv)_saved=JSON.parse(_sv);}catch(e){}
+
+function savedKey(url,title){return(url&&url.length>5?url:(title||'')).slice(0,120);}
+function savedBtnId(key){return btoa(unescape(encodeURIComponent(key))).slice(0,16).replace(/[^a-zA-Z0-9]/g,'');}
+function savedHas(key){var k=savedKey(key,'');return _saved.some(function(s){return s.key===k;});}
+
+function savedToggle(btn,title,meta,url,platform){
+  var key=savedKey(url,title);
+  var idx=_saved.findIndex(function(s){return s.key===key;});
+  if(idx>=0){
+    _saved.splice(idx,1);
+    btn.textContent='☆ Save';btn.classList.remove('saved');
+  } else {
+    _saved.unshift({key:key,title:title,meta:meta,url:url,platform:platform,savedAt:Date.now()});
+    btn.textContent='⭐ Saved';btn.classList.add('saved');
+  }
+  try{localStorage.setItem('tr_saved',JSON.stringify(_saved));}catch(e){}
+  savedUpdateCount();
+}
+
+function savedClearAll(){
+  if(!_saved.length)return;
+  if(!confirm('Clear all '+_saved.length+' saved items?'))return;
+  _saved=[];
+  try{localStorage.setItem('tr_saved','[]');}catch(e){}
+  savedRender();savedUpdateCount();
+}
+
+function savedUpdateCount(){
+  var n=_saved.length;
+  var badge=document.getElementById('saved-tab-count');
+  if(badge){badge.textContent=n;badge.style.display=n?'':'none';}
+  var cnt=document.getElementById('saved-count');
+  if(cnt)cnt.textContent=n+' item'+(n===1?'':'s');
+}
+
+function savedRender(){
+  var el=document.getElementById('saved-list');
+  if(!el)return;
+  savedUpdateCount();
+  if(!_saved.length){
+    el.innerHTML='<div class="saved-empty"><span>⭐</span>Nothing saved yet.<br>Hit the bookmark on any Pulse item.</div>';
+    return;
+  }
+  el.innerHTML=_saved.map(function(i){
+    var ago=i.savedAt?Math.round((Date.now()-i.savedAt)/60000)+'m ago':'';
+    var titleEnc=escHtml(i.title||'').replace(/'/g,'&#39;');
+    var metaEnc=escHtml(i.meta||'').replace(/'/g,'&#39;');
+    var urlEnc=escHtml(i.url||'').replace(/'/g,'&#39;');
+    var key=savedKey(i.url,i.title);
+    var btnId=savedBtnId(key);
+    return '<div class="pulse-item">'+pulseBadge(i.platform||'')+'<div class="pulse-item-body">'+
+      '<div class="pulse-item-title"><a href="'+escHtml(i.url||'')+'" target="_blank" rel="noopener">'+escHtml(i.title||'')+'</a></div>'+
+      '<div class="pulse-item-meta">'+escHtml(i.meta||'')+'&nbsp;·&nbsp;saved '+ago+'</div>'+
+      '<div class="pulse-item-actions">'+
+        '<button class="launch-btn" onclick="openLaunchModal(\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+escHtml(i.platform||'')+'\')">🚀 Launch</button>'+
+        '<button class="save-btn saved" id="sbtn-'+btnId+'" onclick="savedToggle(this,\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+escHtml(i.platform||'')+'\');savedRender()">⭐ Saved</button>'+
+      '</div></div></div>';
+  }).join('');
 }
 
 /* ══════════════════════════════════════════════════════════
