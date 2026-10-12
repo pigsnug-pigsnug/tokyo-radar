@@ -10,6 +10,72 @@ const H6  = 6*60*60*1000;
 app.use(express.static(path.join(__dirname,'static')));
 app.use(express.static(path.join(__dirname)));
 
+const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
+function parseXmlItems(xml, tag) {
+  const items = [];
+  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'gi');
+  let m;
+  while ((m = re.exec(xml)) !== null) items.push(m[1]);
+  return items;
+}
+function getTag(block, tag) {
+  const m = block.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>`, 'i'))
+           || block.match(new RegExp(`<${tag}[^>]*>([^<]*)<\\/${tag}>`, 'i'));
+  return m ? m[1].trim() : '';
+}
+function getAttr(block, tag, attr) {
+  const m = block.match(new RegExp(`<${tag}[^>]*${attr}="([^"]*)"`, 'i'));
+  return m ? m[1].trim() : '';
+}
+
+async function fetchReddit() {
+  try {
+    const subs = ['popular','technology','worldnews','programming','business'];
+    const results = await Promise.allSettled(subs.map(sub =>
+      fetch(`https://www.reddit.com/r/${sub}/.rss`, {
+        headers: { 'User-Agent': CHROME_UA, 'Accept': 'application/xml,text/xml,*/*' },
+        redirect: 'follow'
+      }).then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
+    ));
+    const items = [];
+    for (const r of results) {
+      if (r.status !== 'fulfilled') continue;
+      const entries = parseXmlItems(r.value, 'entry');
+      for (const e of entries) {
+        const title = getTag(e, 'title');
+        const link = getAttr(e, 'link', 'href') || getTag(e, 'link');
+        const updated = getTag(e, 'updated');
+        const category = getAttr(e, 'category', 'label') || getTag(e, 'category');
+        if (!title || !link) continue;
+        const seenAt = updated ? new Date(updated).getTime() : Date.now();
+        items.push({ platform: 'Reddit', title, meta: category ? `r/${category}` : 'Reddit', url: link, tags: ['reddit'], score: 0, seenAt, lastSeen: Date.now() });
+      }
+    }
+    return items.filter(i => Date.now() - i.seenAt <= H48);
+  } catch(e) { console.error('Reddit error:', e.message); return []; }
+}
+
+async function fetchGoogle() {
+  try {
+    const res = await fetch('https://trends.google.com/trends/trendingsearches/daily/rss?geo=US', {
+      headers: { 'User-Agent': CHROME_UA, 'Accept': 'text/xml,application/xml,*/*', 'Accept-Language': 'en-US,en;q=0.9' },
+      redirect: 'follow'
+    });
+    if (!res.ok) throw new Error(res.status);
+    const xml = await res.text();
+    const rawItems = parseXmlItems(xml, 'item');
+    return rawItems.map(item => {
+      const title = getTag(item, 'title');
+      const traffic = getTag(item, 'ht:approx_traffic') || getTag(item, 'approx_traffic') || '';
+      const link = getTag(item, 'link');
+      const pubDate = getTag(item, 'pubDate');
+      const seenAt = pubDate ? new Date(pubDate).getTime() : Date.now();
+      return { platform: 'Google Trends', title, meta: traffic ? `~${traffic} searches` : 'Trending', url: link || 'https://trends.google.com', tags: ['trending'], score: 0, seenAt: isNaN(seenAt) ? Date.now() : seenAt, lastSeen: Date.now() };
+    }).filter(i => i.title && Date.now() - i.seenAt <= H48);
+  } catch(e) { console.error('Google Trends error:', e.message); return []; }
+}
+
 async function fetchHN() {
   try {
     const [top,fresh] = await Promise.allSettled([
@@ -38,17 +104,18 @@ function merge(ex,fr){
 }
 
 async function fetchAll(){
-  const [h,d]=await Promise.all([fetchHN(),fetchDevTo()]);
-  CACHE.items=merge(CACHE.items,[...h,...d]);
-  CACHE.lastFetch=Date.now();
-  console.log(`[${new Date().toLocaleTimeString()}] Items: ${CACHE.items.length}`);
+  const [reddit, google, hn, devto] = await Promise.all([fetchReddit(), fetchGoogle(), fetchHN(), fetchDevTo()]);
+  CACHE.items = merge(CACHE.items, [...reddit, ...google, ...hn, ...devto]);
+  CACHE.lastFetch = Date.now();
+  const counts = { Reddit: reddit.length, 'Google Trends': google.length, 'Hacker News': hn.length, 'Dev.to': devto.length };
+  console.log(`[${new Date().toLocaleTimeString()}] Fetched:`, counts, '| Total cache:', CACHE.items.length);
 }
 fetchAll();
-setInterval(fetchAll,60000);
+setInterval(fetchAll, 60000);
 
 app.get('/api/trends',(req,res)=>{
   const now=Date.now(),items=CACHE.items;
   res.json({updated_at:CACHE.lastFetch,sources:[...new Set(items.map(i=>i.platform))],now_items:items.filter(i=>now-i.seenAt<=H6),history_items:items.filter(i=>now-i.seenAt>H6),all_items:items});
 });
-app.get('/api/status',(req,res)=>res.json({ok:true,items:CACHE.items.length}));
+app.get('/api/status',(req,res)=>res.json({ok:true,items:CACHE.items.length,sources:[...new Set(CACHE.items.map(i=>i.platform))]}));
 app.listen(PORT,()=>console.log(`Tokyo Radar running at http://localhost:${PORT}`));
