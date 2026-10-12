@@ -410,15 +410,74 @@ function pulseInit(){
   pulseFetch();
   pulseTimer=setInterval(pulseFetch,60000);
 }
+
+// Client-side Reddit fetch (browser IP, not blocked)
+function pulseClientReddit(){
+  var proxy='https://api.allorigins.win/get?url=';
+  var feeds=['https://www.reddit.com/r/popular.json?limit=25','https://www.reddit.com/r/technology.json?limit=15','https://www.reddit.com/r/worldnews.json?limit=15'];
+  var H48=48*3600*1000;
+  return Promise.allSettled(feeds.map(function(u){
+    return fetch(proxy+encodeURIComponent(u)).then(function(r){return r.json()}).then(function(d){
+      var body=typeof d.contents==='string'?JSON.parse(d.contents):d.contents;
+      return (body&&body.data&&body.data.children)||[];
+    });
+  })).then(function(results){
+    var items=[];
+    results.forEach(function(r){
+      if(r.status!=='fulfilled')return;
+      (r.value||[]).forEach(function(c){
+        var d=c.data;if(!d||!d.title)return;
+        var t=(d.created_utc||0)*1000;
+        if(Date.now()-t>H48)return;
+        items.push({platform:'Reddit',title:d.title,meta:'r/'+d.subreddit+' · '+(d.ups||0).toLocaleString()+' ups · '+(d.num_comments||0)+' comments',url:'https://reddit.com'+d.permalink,tags:[d.subreddit],score:(d.ups||0)+(d.num_comments||0),seenAt:t,lastSeen:Date.now()});
+      });
+    });
+    return items;
+  }).catch(function(){return[];});
+}
+
+// Client-side Google Trends fetch (browser IP, not blocked)
+function pulseClientGoogleTrends(){
+  var proxy='https://api.allorigins.win/get?url=';
+  var url='https://trends.google.com/trends/trendingsearches/daily/rss?geo=US';
+  return fetch(proxy+encodeURIComponent(url)).then(function(r){return r.json()}).then(function(d){
+    var xml=d.contents||'';
+    var items=[];
+    var rx=/<item>([\s\S]*?)<\/item>/g;var m;
+    while((m=rx.exec(xml))!==null){
+      var b=m[1];
+      var title=(b.match(/<title><!\[CDATA\[(.*?)\]\]>/)||b.match(/<title>(.*?)<\/title>/))?.[1]?.trim();
+      var traffic=b.match(/<ht:approx_traffic>(.*?)<\/ht:approx_traffic>/)?.[1]?.trim();
+      var link=b.match(/<link>(.*?)<\/link>/)?.[1]?.trim();
+      var pub=b.match(/<pubDate>(.*?)<\/pubDate>/)?.[1]?.trim();
+      var t=pub?new Date(pub).getTime():Date.now();
+      if(title)items.push({platform:'Google Trends',title:title,meta:'~'+(traffic||'N/A')+' searches',url:link||'https://trends.google.com/trends/explore?q='+encodeURIComponent(title),tags:['trending'],score:parseInt((traffic||'0').replace(/[^0-9]/g,''))||0,seenAt:isNaN(t)?Date.now():t,lastSeen:Date.now()});
+    }
+    return items.slice(0,20);
+  }).catch(function(){return[];});
+}
+
 function pulseFetch(){
   var el=document.getElementById('pulse-status');
   if(el)el.textContent='Refreshing…';
-  fetch('/api/trends').then(function(r){return r.json()}).then(function(d){
-    pulseData=d;
-    if(el){
-      var ago=d.updated_at?Math.round((Date.now()-d.updated_at)/1000)+'s ago':'—';
-      el.textContent='Updated '+ago+' · '+d.all_items.length+' items';
-    }
+  // Fetch server sources (HN + Dev.to) + client-side Reddit + Google Trends in parallel
+  Promise.all([
+    fetch('/api/trends').then(function(r){return r.json()}).catch(function(){return{all_items:[],now_items:[],updated_at:0}}),
+    pulseClientReddit(),
+    pulseClientGoogleTrends()
+  ]).then(function(results){
+    var server=results[0];
+    var reddit=results[1];
+    var gtrends=results[2];
+    // Merge all into pulseData
+    var combined=[].concat(server.all_items||[]).concat(reddit).concat(gtrends);
+    // Deduplicate by title
+    var seen=new Map();
+    combined.forEach(function(i){var k=(i.platform+'::'+i.title).toLowerCase();if(!seen.has(k))seen.set(k,i);});
+    var all=Array.from(seen.values()).sort(function(a,b){return b.seenAt-a.seenAt});
+    var H6=6*3600*1000;
+    pulseData={all_items:all,now_items:all.filter(function(i){return Date.now()-i.seenAt<=H6}),updated_at:Date.now()};
+    if(el)el.textContent='Updated just now · '+all.length+' items (HN+Dev+Reddit+Trends)';
     pulseRender();
   }).catch(function(e){
     if(el)el.textContent='Fetch error — retrying';
@@ -437,7 +496,8 @@ function setPulseTime(t,btn){
   pulseRender();
 }
 function pulseBadge(p){
-  var cls={Reddit:'badge-reddit','Hacker News':'badge-hn','Google Trends':'badge-google','Dev.to':'badge-devto'}[p]||'badge-devto';
+  var map={'Reddit':'badge-reddit','Hacker News':'badge-hn','Google Trends':'badge-google','Dev.to':'badge-devto'};
+  var cls=map[p]||'badge-devto';
   return '<span class="pulse-item-badge '+cls+'">'+p+'</span>';
 }
 function pulseRender(){
