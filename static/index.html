@@ -52,7 +52,7 @@ a{color:inherit}
 #tab-bar .tb-clock{padding:0 16px;font-family:var(--mono);font-size:12px;color:var(--rail-muted);white-space:nowrap;flex-shrink:0}
 
 /* ── TAB PANELS ── */
-.tab-panel{display:none}
+.tab-panel{display:none;min-height:0}
 .tab-panel.active{display:block}
 
 /* ════════════════════════════════════════════
@@ -62,7 +62,8 @@ a{color:inherit}
 #pulse-panel{min-height:calc(100vh - var(--tab-h));background:#08090A;flex-direction:row}
 #pulse-panel.active{display:flex!important}
 /* Left sidebar */
-.pulse-sidebar{width:176px;flex-shrink:0;background:#0A0B0E;border-right:1px solid #1C1E26;position:sticky;top:var(--tab-h);height:calc(100vh - var(--tab-h));overflow-y:auto;display:flex;flex-direction:column;padding:10px 0}
+.pulse-sidebar{width:176px;flex-shrink:0;background:#0A0B0E;border-right:1px solid #1C1E26;position:sticky;top:var(--tab-h);height:calc(100vh - var(--tab-h));overflow-y:auto;display:flex;flex-direction:column;padding:10px 0;z-index:1}
+#pulse-panel:not(.active) .pulse-sidebar{display:none!important}
 /* Watch section */
 .psb-watch{padding:8px 12px 6px;border-bottom:1px solid #1C1E26}
 .psb-watch-label{font-size:10px;font-weight:700;letter-spacing:1px;color:#6B7280;text-transform:uppercase;font-family:var(--mono);margin-bottom:6px}
