@@ -59,7 +59,8 @@ a{color:inherit}
    PULSE TAB
    ════════════════════════════════════════════ */
 /* ── PULSE PANEL: sidebar + feed layout ── */
-#pulse-panel{min-height:calc(100vh - var(--tab-h));background:#08090A;display:flex;flex-direction:row}
+#pulse-panel{min-height:calc(100vh - var(--tab-h));background:#08090A;flex-direction:row}
+#pulse-panel.active{display:flex!important}
 /* Left sidebar */
 .pulse-sidebar{width:176px;flex-shrink:0;background:#0A0B0E;border-right:1px solid #1C1E26;position:sticky;top:var(--tab-h);height:calc(100vh - var(--tab-h));overflow-y:auto;display:flex;flex-direction:column;padding:10px 0}
 /* Watch section */
@@ -797,11 +798,12 @@ function switchTab(t){
     var fn=b.getAttribute('onclick')||'';
     b.classList.toggle('active',fn.indexOf("'"+t+"'")>-1);
   });
-  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');p.style.display='';});
   var panel=document.getElementById(t+'-panel');
-  if(panel)panel.classList.add('active');
-  if(t==='desk'){panel.style.display='grid';}
-  else if(panel){panel.style.display='';}
+  if(panel){
+    panel.classList.add('active');
+    if(t==='desk')panel.style.display='grid';
+  }
   if(t==='saved')savedRender();
   if(t==='starred')starredRender();
   if(t==='notes')notesRender();
