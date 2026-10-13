@@ -195,6 +195,7 @@ a{color:inherit}
 #launch-modal .lm-post:hover{opacity:.85}
 #launch-modal .lm-regen{margin-top:14px;width:100%;padding:8px;border-radius:8px;border:1px dashed #2A2D38;background:transparent;color:#6B7280;font-size:12px;font-family:var(--mono);cursor:pointer;transition:all .15s}
 #launch-modal .lm-regen:hover{border-color:#5A6AFF;color:#5A6AFF}
+#launch-modal .lm-regen.logged{border-color:#00E676;color:#00E676;opacity:.6;cursor:default}
 
 /* ════════════════════════════════════════════
    RADAR TAB  (Tinance-style)
@@ -874,7 +875,11 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
     </div>
     <div class="lm-topic" id="lm-topic-text"></div>
     <div class="lm-tweets" id="lm-tweets"></div>
-    <button class="lm-regen" onclick="launchRegen()">⟳ Generate new variations</button>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="lm-regen" style="flex:1" onclick="launchRegen()">⟳ New variations</button>
+      <button id="lm-log-btn" class="lm-regen" style="flex:1;border-color:#00E676;color:#00E676" onclick="confirmLogLaunch()">📋 Log this launch</button>
+    </div>
+    <div style="font-size:11px;color:#4B5563;font-family:var(--mono);text-align:center;margin-top:6px">Opening this modal does not log anything — click above when you actually launch</div>
   </div>
 </div>
 
@@ -1314,7 +1319,7 @@ function historyRender(){
   if(!el)return;
   historyUpdateCount();
   if(!_launchHistory.length){
-    el.innerHTML='<div class="history-empty">No launches yet — hit 🚀 on any Pulse item to log it here.</div>';
+    el.innerHTML='<div class="history-empty">No launches logged yet.<br><span style="font-size:12px;opacity:.6">Open any item\'s launch modal → click "Log this launch" after you actually post it.</span></div>';
     return;
   }
   el.innerHTML=_launchHistory.map(function(i){
@@ -1607,7 +1612,6 @@ function pulseFetch(){
 function showNewItemsBanner(count){
   var b=document.getElementById('new-items-banner');
   if(!b)return;
-  b.textContent='↑ '+count+' new item'+(count===1?'':' s')+' — click to load';
   b.textContent='↑ '+count+' new item'+(count===1?'':'s')+' — tap to load';
   b.classList.add('show');
 }
@@ -1798,7 +1802,7 @@ function pulseItemHtml(i,q){
   var watchHit=pwbMatch(i.title+' '+(i.meta||''));
   var seen=isSeen(i.url||i.title);
   var nk=noteKey(i.url,i.title);
-  var nid=btoa(unescape(encodeURIComponent(nk))).slice(0,12).replace(/[^a-zA-Z0-9]/g,'');
+  var nid=btoa(unescape(encodeURIComponent(nk))).slice(0,32).replace(/[^a-zA-Z0-9]/g,'').slice(0,24);
   var hasNote=!!getNote(i.url,i.title);
   var noteText=getNote(i.url,i.title);
 
@@ -1890,8 +1894,17 @@ function openLaunchModal(title,meta,url,platform){
   var topicEl=document.getElementById('lm-topic-text');
   if(topicEl)topicEl.textContent='📌 '+title+(meta?' · '+meta:'');
   launchGenerate();
+  // Reset log button state
+  var logBtn=document.getElementById('lm-log-btn');
+  if(logBtn){logBtn.textContent='📋 Log this launch';logBtn.disabled=false;logBtn.classList.remove('logged');}
   document.getElementById('launch-modal').classList.add('open');
-  logLaunch(title,meta,platform);
+  // logLaunch is NOT called here — only when user clicks "Log this launch"
+}
+function confirmLogLaunch(){
+  var btn=document.getElementById('lm-log-btn');
+  if(!btn||btn.disabled)return;
+  logLaunch(_launchItem.title,_launchItem.meta,_launchItem.platform);
+  btn.textContent='✅ Logged!';btn.disabled=true;btn.classList.add('logged');
 }
 function closeLaunchModal(){
   document.getElementById('launch-modal').classList.remove('open');
@@ -2558,8 +2571,8 @@ function checkCoinAlert(events){
   var mentionCount=0;
   if(coin){
     events.forEach(function(e){
-      var n=(e.name||e.baseToken&&e.baseToken.name||'').toLowerCase();
-      var sym=(e.symbol||e.baseToken&&e.baseToken.symbol||'').toLowerCase();
+      var n=(e.n||e.name||'').toLowerCase();
+      var sym=(e.s||e.symbol||'').toLowerCase();
       if(n.includes(coin)||sym.includes(coin))mentionCount++;
     });
   }
