@@ -528,7 +528,7 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
       <button class="psb-btn" onclick="setSideFilter('__notes',this)">✎ Notes <span class="psb-count" id="psb-notes-count"></span></button>
       <!-- Time filters -->
       <div class="psb-divider" style="margin-top:4px"></div>
-      <button class="psb-btn active-time" id="psb-time-all" onclick="setSideTime('all',this)">All time</button>
+      <button class="psb-btn active" id="psb-time-all" onclick="setSideTime('all',this)">All time</button>
       <button class="psb-btn" id="psb-time-6h" onclick="setSideTime('6h',this)">Last 6h</button>
       <button class="psb-btn" id="psb-time-12h" onclick="setSideTime('12h',this)">Last 12h</button>
       <button class="psb-btn" id="psb-time-24h" onclick="setSideTime('24h',this)">Last 24h</button>
@@ -1384,9 +1384,9 @@ function clearPulseSearch(){
 function pulseFilteredItems(){
   var items=(pulseData.all_items||[]).slice();
   // Time filter
-  if(pulseTime==='6h'){var c6=6*3600000;items=items.filter(function(i){return Date.now()-i.seenAt<=c6});}
-  else if(pulseTime==='12h'){var c12=12*3600000;items=items.filter(function(i){return Date.now()-i.seenAt<=c12});}
-  else if(pulseTime==='24h'){var c24=24*3600000;items=items.filter(function(i){return Date.now()-i.seenAt<=c24});}
+  if(pulseTime==='6h'){var c6=6*3600000;items=items.filter(function(i){var t=i.lastSeen||i.seenAt||0;return t&&Date.now()-t<=c6;});}
+  else if(pulseTime==='12h'){var c12=12*3600000;items=items.filter(function(i){var t=i.lastSeen||i.seenAt||0;return t&&Date.now()-t<=c12;});}
+  else if(pulseTime==='24h'){var c24=24*3600000;items=items.filter(function(i){var t=i.lastSeen||i.seenAt||0;return t&&Date.now()-t<=c24;});}
   // Platform / special filter
   if(pulseFilter==='__starred'){
     items=items.filter(function(i){return starredHas(i.url||i.title);});
@@ -1452,19 +1452,19 @@ function setSideTime(t,btn){
 /* ── Update sidebar badge counts ── */
 function updateSidebarCounts(){
   try{
-    var starred=JSON.parse(localStorage.getItem('tr_starred')||'[]').length;
-    var saved=JSON.parse(localStorage.getItem('tr_saved')||'[]').length;
-    var notes=Object.keys(JSON.parse(localStorage.getItem('tr_notes')||'{}')).length;
     var bin=JSON.parse(localStorage.getItem('tr_bin')||'[]').length;
     var el;
+    // Count only items currently in the live feed (not expired localStorage entries)
+    var allItems=pulseData.all_items||[];
+    var starred=allItems.filter(function(i){return starredHas(i.url||i.title);}).length;
+    var saved=allItems.filter(function(i){return savedHas(i.url||i.title);}).length;
+    var notes=allItems.filter(function(i){return !!getNote(i.url,i.title);}).length;
+    var multiItems=allItems.filter(function(i){return isMultiSignal(i.title,i.platform);});
     el=document.getElementById('psb-stars-count');if(el)el.textContent=starred||'';
     el=document.getElementById('psb-saved-count');if(el)el.textContent=saved||'';
     el=document.getElementById('psb-notes-count');if(el)el.textContent=notes||'';
     el=document.getElementById('psb-bin-count');
     if(el){el.textContent=bin||'';el.style.display=bin?'inline':'none';}
-    // multi count
-    var allItems=pulseData.all_items||[];
-    var multiItems=allItems.filter(function(i){return isMultiSignal(i.title,i.platform);});
     el=document.getElementById('psb-multi-count');if(el)el.textContent=multiItems.length||'';
   }catch(e){}
 }
