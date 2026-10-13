@@ -27,7 +27,7 @@
   --tab-h:48px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:var(--body);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
+html,body{font-family:var(--body);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
 button{cursor:pointer;font-family:inherit}
 a{color:inherit}
 
@@ -337,6 +337,21 @@ html[data-theme="rbw"]{
 .history-item-title{font-size:13px;font-weight:500;color:var(--ink);margin-bottom:3px}
 .history-item-meta{font-size:11px;color:var(--muted);font-family:var(--mono)}
 
+/* ── IN-PULSE BOXES (Starred + Notes) ── */
+.pulse-box{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin:12px 20px;overflow:hidden;max-width:820px;margin-left:auto;margin-right:auto}
+.pulse-box-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+.pulse-box-title{font-family:var(--display);font-size:13px;font-weight:900;letter-spacing:.5px;color:var(--ink)}
+.pulse-box-toggle{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.pulse-box-body{padding:10px 14px;display:none}
+.pulse-box-body.open{display:block}
+.pb-empty{font-size:12px;color:var(--muted);padding:6px 0;font-family:var(--mono)}
+.pb-note-item{padding:8px 0;border-bottom:1px solid var(--line);font-size:12px}
+.pb-note-item:last-child{border-bottom:none}
+.pb-note-title{font-weight:600;color:var(--ink);margin-bottom:3px;font-size:13px}
+.pb-note-text{color:var(--blue);font-family:var(--mono);background:var(--blue-soft);border-radius:4px;padding:4px 8px}
+.pb-note-del{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11px;float:right;margin-top:2px}
+.pb-note-del:hover{color:var(--bad)}
+
 /* ── WATCH WORDS PANEL in pulse ── */
 .pulse-watch-bar{display:flex;align-items:center;gap:8px;padding:8px 20px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
 .pwb-label{font-size:11px;color:var(--muted);font-family:var(--mono);white-space:nowrap}
@@ -446,6 +461,24 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
     </div>
     <div class="ptb-status" id="pulse-status">Loading…</div>
   </div>
+  <!-- ── STARRED BOX ── -->
+  <div class="pulse-box" id="pb-starred" style="display:none">
+    <div class="pulse-box-header" onclick="pbToggle('pb-starred')">
+      <span class="pulse-box-title">⭐ STARRED <span id="pb-star-count" style="font-size:11px;color:var(--muted);font-weight:400;font-family:var(--mono)"></span></span>
+      <span class="pulse-box-toggle" id="pb-starred-arrow">▲</span>
+    </div>
+    <div class="pulse-box-body open" id="pb-starred-body"></div>
+  </div>
+
+  <!-- ── NOTES BOX ── -->
+  <div class="pulse-box" id="pb-notes" style="display:none">
+    <div class="pulse-box-header" onclick="pbToggle('pb-notes')">
+      <span class="pulse-box-title">📝 NOTES <span id="pb-notes-count" style="font-size:11px;color:var(--muted);font-weight:400;font-family:var(--mono)"></span></span>
+      <span class="pulse-box-toggle" id="pb-notes-arrow">▲</span>
+    </div>
+    <div class="pulse-box-body open" id="pb-notes-body"></div>
+  </div>
+
   <div class="pulse-list" id="pulse-list">
     <div class="pulse-spinner">Fetching pulse data…</div>
   </div>
@@ -662,6 +695,7 @@ function appInit(){
   savedUpdateCount();
   historyUpdateCount();
   pwbRender();
+  pbRenderAll();
   scrollTopInit();
   morningDigestInit();
 }
@@ -802,14 +836,19 @@ function submitNote(noteId,url,title){
     if(text.trim()){btn.classList.add('has-note');btn.textContent='📝';}
     else{btn.classList.remove('has-note');btn.textContent='✎';}
   }
+  pbNotesRender();
   // show note preview if exists
   var prev=document.getElementById('note-prev-'+noteId);
   if(prev){prev.style.display=text.trim()?'block':'none';if(text.trim())prev.textContent='📝 '+text.trim().slice(0,80);}
 }
 
 /* ══════════════════════════════════════════════════════════
-   MULTI-SIGNAL DETECTION
+   MULTI-SIGNAL DETECTION (persistent — once detected, stays forever)
    ══════════════════════════════════════════════════════════ */
+// _multiDetected: Set of item keys (platform::title) that have ever been multi-signal
+var _multiDetected={};
+try{var _msd=localStorage.getItem('tr_multi');if(_msd)_multiDetected=JSON.parse(_msd);}catch(e){}
+
 function buildMultiSignalMap(items){
   var map={};
   items.forEach(function(i){
@@ -820,10 +859,27 @@ function buildMultiSignalMap(items){
       map[w].count++;
     });
   });
+  // Detect new multi-signals and persist them
+  items.forEach(function(i){
+    var words=i.title.toLowerCase().replace(/[^\w\s]/g,' ').split(/\s+/).filter(function(w){return w.length>4;});
+    var isMulti=words.some(function(w){return map[w]&&map[w].platforms.size>=3;});
+    if(isMulti){
+      var k=(i.platform+'::'+i.title).toLowerCase();
+      _multiDetected[k]=Date.now();
+    }
+  });
+  // Keep only last 30 days to avoid unbounded growth
+  var cutoff=Date.now()-30*24*3600000;
+  Object.keys(_multiDetected).forEach(function(k){if(_multiDetected[k]<cutoff)delete _multiDetected[k];});
+  try{localStorage.setItem('tr_multi',JSON.stringify(_multiDetected));}catch(e){}
   return map;
 }
 var _multiMap={};
-function isMultiSignal(title){
+function isMultiSignal(title,platform){
+  // Check persistent store first
+  var k=((platform||'')+'::'+title).toLowerCase();
+  if(_multiDetected[k])return true;
+  // Also check live map
   var words=title.toLowerCase().replace(/[^\w\s]/g,' ').split(/\s+/).filter(function(w){return w.length>4;});
   return words.some(function(w){return _multiMap[w]&&_multiMap[w].platforms.size>=3;});
 }
@@ -866,6 +922,79 @@ function historyClear(){
   _launchHistory=[];
   try{localStorage.setItem('tr_launch_history','[]');}catch(e){}
   historyRender();
+}
+
+/* ══════════════════════════════════════════════════════════
+   PULSE IN-PANEL BOXES (Starred + Notes)
+   ══════════════════════════════════════════════════════════ */
+function pbToggle(id){
+  var body=document.getElementById(id+'-body');
+  var arrow=document.getElementById(id+'-arrow');
+  if(!body)return;
+  var isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  if(arrow)arrow.textContent=isOpen?'▼':'▲';
+}
+
+function pbStarredRender(){
+  var box=document.getElementById('pb-starred');
+  var body=document.getElementById('pb-starred-body');
+  var cnt=document.getElementById('pb-star-count');
+  if(!box||!body)return;
+  if(!_saved.length){box.style.display='none';return;}
+  box.style.display='';
+  if(cnt)cnt.textContent='('+_saved.length+')';
+  body.innerHTML=_saved.slice(0,10).map(function(i){
+    var titleEnc=escHtml(i.title||'').replace(/'/g,'&#39;');
+    var metaEnc=escHtml(i.meta||'').replace(/'/g,'&#39;');
+    var urlEnc=escHtml(i.url||'').replace(/'/g,'&#39;');
+    var platEnc=escHtml(i.platform||'');
+    return '<div class="pb-note-item">'+
+      pulseBadge(i.platform||'')+
+      ' <span class="pb-note-title"><a href="'+escHtml(i.url||'')+'" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:none">'+escHtml(i.title||'')+'</a></span>'+
+      '<button class="pb-note-del" onclick="pbStarRemove(\''+urlEnc+'\',\''+titleEnc+'\',\''+metaEnc+'\',\''+platEnc+'\',this)">✕ unstar</button>'+
+    '</div>';
+  }).join('')+(
+    _saved.length>10?'<div style="font-size:11px;color:var(--muted);font-family:var(--mono);padding:6px 0">…and '+(_saved.length-10)+' more — see Saved tab</div>':''
+  );
+}
+
+function pbStarRemove(url,title,meta,platform,btn){
+  // Simulate a toggle via a fake btn object
+  var fakeBtn={textContent:'',classList:{remove:function(){},add:function(){}}};
+  savedToggle(fakeBtn,title,meta,url,platform);
+  pbStarredRender();
+}
+
+function pbNotesRender(){
+  var box=document.getElementById('pb-notes');
+  var body=document.getElementById('pb-notes-body');
+  var cnt=document.getElementById('pb-notes-count');
+  if(!box||!body)return;
+  var keys=Object.keys(_notes).filter(function(k){return _notes[k]&&_notes[k].trim();});
+  if(!keys.length){box.style.display='none';return;}
+  box.style.display='';
+  if(cnt)cnt.textContent='('+keys.length+')';
+  body.innerHTML=keys.slice(0,20).map(function(k){
+    var text=_notes[k]||'';
+    var safeK=escHtml(k).replace(/'/g,'&#39;');
+    return '<div class="pb-note-item">'+
+      '<div class="pb-note-title">'+escHtml(k.slice(0,80))+'<button class="pb-note-del" onclick="pbNoteDelete(\''+safeK+'\')">✕ delete</button></div>'+
+      '<div class="pb-note-text">'+escHtml(text.slice(0,120))+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+function pbNoteDelete(key){
+  delete _notes[key];
+  try{localStorage.setItem('tr_notes',JSON.stringify(_notes));}catch(e){}
+  pbNotesRender();
+  pulseRender();
+}
+
+function pbRenderAll(){
+  pbStarredRender();
+  pbNotesRender();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -946,6 +1075,7 @@ function pulseFetch(){
     if(el)el.textContent='Updated just now · '+all.length+' items'+(viral?' · 🔥 '+viral+' viral':'');
     pulsePage=0;
     pulseRender();
+    pbRenderAll();
     maybeShowMorningDigest(all);
   }).catch(function(){
     if(el)el.textContent='Fetch error — retrying';
@@ -1028,7 +1158,7 @@ function pulseItemHtml(i,q){
   var ago=i.seenAt?Math.round((Date.now()-i.seenAt)/60000)+'m ago':'';
   var viral=isViral(i);
   var viralTag=viral?'<span class="viral-badge">🔥 VIRAL</span>':'';
-  var multi=isMultiSignal(i.title);
+  var multi=isMultiSignal(i.title,i.platform);
   var multiTag=multi?'<span class="multi-badge">⚡ MULTI</span>':'';
   // velocity
   var velTag='';
@@ -1252,6 +1382,7 @@ function savedToggle(btn,title,meta,url,platform){
   }
   try{localStorage.setItem('tr_saved',JSON.stringify(_saved));}catch(e){}
   savedUpdateCount();
+  pbStarredRender();
 }
 
 function savedClearAll(){
