@@ -59,23 +59,35 @@ async function fetchReddit() {
   try {
     const subs = ['popular','technology','worldnews','programming','business'];
     const results = await Promise.allSettled(subs.map(sub =>
-      fetch(`https://www.reddit.com/r/${sub}/.rss`, {
-        headers: { 'User-Agent': CHROME_UA, 'Accept': 'application/xml,text/xml,*/*' },
+      fetch(`https://www.reddit.com/r/${sub}.json?limit=25&raw_json=1`, {
+        headers: { 'User-Agent': 'TokyoRadar/1.0 (aggregator bot)', 'Accept': 'application/json' },
         redirect: 'follow'
-      }).then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
+      }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
     ));
     const items = [];
     for (const r of results) {
       if (r.status !== 'fulfilled') continue;
-      const entries = parseXmlItems(r.value, 'entry');
-      for (const e of entries) {
-        const title = getTag(e, 'title');
-        const link = getAttr(e, 'link', 'href') || getTag(e, 'link');
-        const updated = getTag(e, 'updated');
-        const category = getAttr(e, 'category', 'label') || getTag(e, 'category');
-        if (!title || !link) continue;
-        const seenAt = updated ? new Date(updated).getTime() : Date.now();
-        items.push({ platform: 'Reddit', title, meta: category ? `r/${category}` : 'Reddit', url: link, tags: ['reddit'], score: 0, seenAt, lastSeen: Date.now() });
+      const posts = r.value?.data?.children || [];
+      for (const child of posts) {
+        const p = child.data;
+        if (!p || !p.title) continue;
+        const title = p.title;
+        const url = p.url || `https://www.reddit.com${p.permalink}`;
+        const sub = p.subreddit || '';
+        const ups = p.ups || p.score || 0;
+        const comments = p.num_comments || 0;
+        const seenAt = p.created_utc ? p.created_utc * 1000 : Date.now();
+        const upsFmt = ups >= 1000 ? (ups/1000).toFixed(1)+'k' : String(ups);
+        items.push({
+          platform: 'Reddit',
+          title,
+          meta: `r/${sub} · ${upsFmt} ups · ${comments} comments`,
+          url: url.startsWith('http') ? url : `https://www.reddit.com${p.permalink}`,
+          tags: ['reddit'],
+          score: ups + comments * 2,
+          seenAt,
+          lastSeen: Date.now()
+        });
       }
     }
     return items.filter(i => Date.now() - i.seenAt <= H48);

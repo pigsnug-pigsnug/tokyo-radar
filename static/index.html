@@ -100,10 +100,14 @@ a{color:inherit}
 .pulse-item-actions{display:flex;align-items:center;gap:6px;margin-top:6px}
 .launch-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:4px;border:1px solid #00E650;background:rgba(0,230,80,.08);color:#00E650;font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer;transition:all .15s;letter-spacing:.3px}
 .launch-btn:hover{background:#00E650;color:#000}
-/* ☆ Save = yellow star (goes to Starred box + Saved tab) */
+/* ★ Star button (goes to Stars tab) */
+.star-btn{display:inline-flex;align-items:center;padding:3px 8px;border-radius:4px;border:1px solid var(--line2);background:transparent;color:var(--muted);font-size:14px;font-weight:600;font-family:var(--mono);cursor:pointer;transition:all .15s;line-height:1}
+.star-btn:hover{border-color:#FFD600;color:#FFD600}
+.star-btn.starred{border-color:#FFD600;background:rgba(255,214,0,.15);color:#FFD600}
+/* 🔖 Save button (goes to Saved tab) */
 .save-btn{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:4px;border:1px solid var(--line2);background:transparent;color:var(--muted);font-size:11px;font-weight:600;font-family:var(--mono);cursor:pointer;transition:all .15s}
-.save-btn:hover{border-color:#FFD600;color:#FFD600}
-.save-btn.saved{border-color:#FFD600;background:rgba(255,214,0,.1);color:#FFD600}
+.save-btn:hover{border-color:#60a5fa;color:#60a5fa}
+.save-btn.saved{border-color:#60a5fa;background:rgba(96,165,250,.1);color:#60a5fa}
 
 /* ── SAVED PANEL ── */
 #saved-panel{min-height:calc(100vh - var(--tab-h));background:var(--bg)}
@@ -418,9 +422,10 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
   <div class="tb-tabs">
     <button class="tb-tab active" onclick="switchTab('pulse')">Pulse</button>
     <button class="tb-tab" onclick="switchTab('radar')">Radar</button>
+    <button class="tb-tab" onclick="switchTab('multi')">⚡ Multi <span id="multi-tab-count" style="display:none;font-size:10px;background:#f97316;color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
     <button class="tb-tab" onclick="switchTab('starred')">★ Stars <span id="starred-tab-count" style="display:none;font-size:10px;background:var(--brand);color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
     <button class="tb-tab" onclick="switchTab('notes')">✎ Notes <span id="notes-tab-count" style="display:none;font-size:10px;background:var(--blue);color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
-    <button class="tb-tab" onclick="switchTab('saved')">Saved <span id="saved-tab-count" style="display:none;font-size:10px;background:var(--brand);color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
+    <button class="tb-tab" onclick="switchTab('saved')">🔖 Saved <span id="saved-tab-count" style="display:none;font-size:10px;background:var(--brand);color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
     <button class="tb-tab" onclick="switchTab('history')">Log</button>
     <button class="tb-tab" onclick="switchTab('desk')">Desk</button>
   </div>
@@ -463,6 +468,10 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
     </div>
     <div class="pulse-filter-group" id="pulse-filters">
       <button class="active" onclick="setPulseFilter('all',this)">All</button>
+      <button onclick="setPulseFilter('__starred',this)">★ Stars</button>
+      <button onclick="setPulseFilter('__multi',this)">⚡ Multi</button>
+      <button onclick="setPulseFilter('__saved',this)">🔖 Saved</button>
+      <button onclick="setPulseFilter('__notes',this)">✎ Notes</button>
       <button onclick="setPulseFilter('Reddit',this)">Reddit</button>
       <button onclick="setPulseFilter('Hacker News',this)">HN</button>
       <button onclick="setPulseFilter('Google Trends',this)">Trends</button>
@@ -530,6 +539,19 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ── MULTI-SIGNAL PANEL ── -->
+<div id="multi-panel" class="tab-panel">
+  <div class="saved-toolbar">
+    <span class="sv-title">⚡ MULTI-SIGNAL</span>
+    <span class="sv-count" id="multi-count">0 signals</span>
+    <button class="sv-clear" onclick="multiClearAll()">Clear all</button>
+  </div>
+  <div style="padding:10px 20px 0;font-size:12px;color:var(--muted);font-family:var(--mono)">Items trending across 3+ platforms at once — saved permanently once detected.</div>
+  <div class="saved-list" id="multi-list">
+    <div class="saved-empty"><span>⚡</span>No multi-signal items yet.<br>They auto-save when a story hits 3+ platforms.</div>
   </div>
 </div>
 
@@ -663,7 +685,7 @@ window.addEventListener('keydown',function(e){
 var _activeTab='pulse';
 function switchTab(t){
   _activeTab=t;
-  var tabOrder=['pulse','radar','starred','notes','saved','history','desk'];
+  var tabOrder=['pulse','radar','multi','starred','notes','saved','history','desk'];
   document.querySelectorAll('.tb-tab').forEach(function(b,i){
     b.classList.toggle('active',tabOrder[i]===t);
   });
@@ -676,6 +698,7 @@ function switchTab(t){
   if(t==='starred')starredRender();
   if(t==='notes')notesRender();
   if(t==='history')historyRender();
+  if(t==='multi')multiRender();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -723,6 +746,7 @@ function appInit(){
   pwbRender();
   starredUpdateCount();
   notesUpdateCount();
+  multiUpdateCount();
   scrollTopInit();
   morningDigestInit();
 }
@@ -958,7 +982,7 @@ function historyClear(){
    STARRED TAB PANEL
    ══════════════════════════════════════════════════════════ */
 function starredUpdateCount(){
-  var n=_saved.length;
+  var n=_starred.length;
   var badge=document.getElementById('starred-tab-count');
   if(badge){badge.textContent=n;badge.style.display=n?'':'none';}
   var cnt=document.getElementById('starred-count');
@@ -969,34 +993,88 @@ function starredRender(){
   var el=document.getElementById('starred-list');
   if(!el)return;
   starredUpdateCount();
-  if(!_saved.length){
-    el.innerHTML='<div class="saved-empty"><span>⭐</span>Nothing starred yet.<br>Hit ☆ Save on any Pulse item.</div>';
+  if(!_starred.length){
+    el.innerHTML='<div class="saved-empty"><span>★</span>Nothing starred yet.<br>Hit ☆ on any Pulse item to star it.</div>';
     return;
   }
-  el.innerHTML=_saved.map(function(i){
+  el.innerHTML=_starred.map(function(i){
     var ago=i.savedAt?Math.round((Date.now()-i.savedAt)/60000)+'m ago':'';
     var titleEnc=escHtml(i.title||'').replace(/'/g,'&#39;');
     var metaEnc=escHtml(i.meta||'').replace(/'/g,'&#39;');
     var urlEnc=escHtml(i.url||'').replace(/'/g,'&#39;');
     var platEnc=escHtml(i.platform||'');
-    var key=savedKey(i.url,i.title);
+    var key=starredKey(i.url,i.title);
     var btnId=savedBtnId(key);
     return '<div class="pulse-item">'+pulseBadge(i.platform||'')+'<div class="pulse-item-body">'+
       '<div class="pulse-item-title"><a href="'+escHtml(i.url||'')+'" target="_blank" rel="noopener" onclick="markSeen(\''+urlEnc+'\')">'+escHtml(i.title||'')+'</a></div>'+
-      '<div class="pulse-item-meta">'+escHtml(i.meta||'')+'&nbsp;·&nbsp;saved '+ago+'</div>'+
+      '<div class="pulse-item-meta">'+escHtml(i.meta||'')+'&nbsp;·&nbsp;starred '+ago+'</div>'+
       '<div class="pulse-item-actions">'+
         '<button class="launch-btn" onclick="openLaunchModal(\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+platEnc+'\')">🚀 Launch</button>'+
-        '<button class="save-btn saved" id="sbtn-'+btnId+'" onclick="savedToggle(this,\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+platEnc+'\');starredRender()">⭐ Saved</button>'+
+        '<button class="star-btn starred" onclick="starToggle(this,\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+platEnc+'\');starredRender()">★ Unstar</button>'+
       '</div></div></div>';
   }).join('');
 }
 
 function starredClearAll(){
-  if(!_saved.length)return;
-  if(!confirm('Clear all '+_saved.length+' starred items?'))return;
-  _saved=[];
-  try{localStorage.setItem('tr_saved','[]');}catch(e){}
-  starredRender();starredUpdateCount();savedUpdateCount();
+  if(!_starred.length)return;
+  if(!confirm('Clear all '+_starred.length+' starred items?'))return;
+  _starred=[];
+  try{localStorage.setItem('tr_starred','[]');}catch(e){}
+  starredRender();starredUpdateCount();
+}
+
+/* ══════════════════════════════════════════════════════════
+   MULTI-SIGNAL TAB PANEL
+   ══════════════════════════════════════════════════════════ */
+function multiUpdateCount(){
+  var n=Object.keys(_multiDetected).length;
+  var badge=document.getElementById('multi-tab-count');
+  if(badge){badge.textContent=n;badge.style.display=n?'':'none';}
+  var cnt=document.getElementById('multi-count');
+  if(cnt)cnt.textContent=n+' signal'+(n===1?'':'s');
+}
+
+function multiRender(){
+  var el=document.getElementById('multi-list');
+  if(!el)return;
+  multiUpdateCount();
+  var keys=Object.keys(_multiDetected);
+  if(!keys.length){
+    el.innerHTML='<div class="saved-empty"><span>⚡</span>No multi-signal items yet.<br>They auto-save when a story hits 3+ platforms.</div>';
+    return;
+  }
+  // Sort by most recently detected
+  keys.sort(function(a,b){return _multiDetected[b]-_multiDetected[a];});
+  // Try to find matching live item for URL
+  var liveMap={};
+  (pulseData.all_items||[]).forEach(function(i){
+    var k=(i.platform+'::'+i.title).toLowerCase();
+    liveMap[k]=i;
+  });
+  el.innerHTML=keys.map(function(k){
+    var live=liveMap[k];
+    var parts=k.split('::');
+    var platform=parts[0]||'';
+    var rawTitle=parts.slice(1).join('::');
+    var title=live?live.title:rawTitle;
+    var url=live?live.url:'';
+    var meta=live?live.meta:'';
+    var d=new Date(_multiDetected[k]);
+    var when=d.toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',month:'short',day:'numeric'})+' '+d.toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true});
+    return '<div class="pulse-item">'+pulseBadge(platform)+'<div class="pulse-item-body">'+
+      '<div class="pulse-item-title">'+(url?'<a href="'+escHtml(url)+'" target="_blank" rel="noopener">'+escHtml(title)+'</a>':escHtml(title))+'<span class="multi-badge">⚡ Multi</span></div>'+
+      '<div class="pulse-item-meta">'+(meta?escHtml(meta)+'&nbsp;·&nbsp;':'')+'first seen '+when+'</div>'+
+    '</div></div>';
+  }).join('');
+}
+
+function multiClearAll(){
+  var n=Object.keys(_multiDetected).length;
+  if(!n)return;
+  if(!confirm('Clear all '+n+' multi-signal records?'))return;
+  _multiDetected={};
+  try{localStorage.setItem('tr_multi','{}');}catch(e){}
+  multiRender();multiUpdateCount();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1077,10 +1155,13 @@ function pulseInit(){
 
 /* ── Viral detection ── */
 function isViralReddit(item){
-  // extract upvotes from meta e.g. "r/popular · 12,345 ups · ..."
-  var m=(item.meta||'').match(/([\d,]+)\s+ups/);
-  if(m){var ups=parseInt(m[1].replace(/,/g,''));return ups>=10000;}
-  // fallback: score field from server-side RSS doesn't have ups, skip
+  // meta format: "r/sub · 12.3k ups · 456 comments" or "r/sub · 1234 ups · ..."
+  var m=(item.meta||'').match(/([\d.]+)([k]?)\s+ups/i);
+  if(m){
+    var n=parseFloat(m[1]);
+    if(m[2].toLowerCase()==='k')n*=1000;
+    return n>=5000;
+  }
   return false;
 }
 function isViralGoogle(item){
@@ -1124,6 +1205,7 @@ function pulseFetch(){
     pulseData={all_items:all,updated_at:Date.now()};
     var viral=all.filter(isViral).length;
     _multiMap=buildMultiSignalMap(all);
+    multiUpdateCount();
     var hits=pwbHits(all);
     var hitsEl=document.getElementById('pwb-hits');
     if(hitsEl){if(hits&&_pwbWords.length){hitsEl.textContent=hits+' match'+(hits===1?'':'es');hitsEl.style.display='';}else{hitsEl.style.display='none';}}
@@ -1184,8 +1266,19 @@ function pulseFilteredItems(){
   if(pulseTime==='6h'){var c6=6*3600000;items=items.filter(function(i){return Date.now()-i.seenAt<=c6});}
   else if(pulseTime==='12h'){var c12=12*3600000;items=items.filter(function(i){return Date.now()-i.seenAt<=c12});}
   else if(pulseTime==='24h'){var c24=24*3600000;items=items.filter(function(i){return Date.now()-i.seenAt<=c24});}
-  // Platform filter
-  if(pulseFilter!=='all')items=items.filter(function(i){return i.platform===pulseFilter});
+  // Platform / special filter
+  if(pulseFilter==='__starred'){
+    var savedKeys=_saved.map(function(s){return savedKey(s.url,s.title);});
+    items=items.filter(function(i){return savedKeys.indexOf(savedKey(i.url,i.title))>-1&&savedHas(i.url||i.title);});
+  } else if(pulseFilter==='__multi'){
+    items=items.filter(function(i){return isMultiSignal(i.title,i.platform);});
+  } else if(pulseFilter==='__saved'){
+    items=items.filter(function(i){return savedHas(i.url||i.title);});
+  } else if(pulseFilter==='__notes'){
+    items=items.filter(function(i){return !!getNote(i.url,i.title);});
+  } else if(pulseFilter!=='all'){
+    items=items.filter(function(i){return i.platform===pulseFilter});
+  }
   // Search
   if(pulseSearch){
     var q=pulseSearch.toLowerCase();
@@ -1246,7 +1339,9 @@ function pulseItemHtml(i,q){
   var platEnc=escHtml(i.platform||'');
   var launchBtn='<button class="launch-btn" onclick="openLaunchModal(\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+platEnc+'\')">🚀 Launch</button>';
   var isSaved=savedHas(i.url||i.title);
-  var saveBtn='<button class="save-btn'+(isSaved?' saved':'')+'" id="sbtn-'+savedBtnId(i.url||i.title)+'" onclick="savedToggle(this,\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+platEnc+'\')\">'+(isSaved?'⭐ Saved':'☆ Save')+'</button>';
+  var isStarred=starredHas(i.url||i.title);
+  var starBtn='<button class="star-btn'+(isStarred?' starred':'')+'" id="starbtn-'+savedBtnId(i.url||i.title)+'" onclick="starToggle(this,\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+platEnc+'\')" title="Star this">'+(isStarred?'★':'☆')+'</button>';
+  var saveBtn='<button class="save-btn'+(isSaved?' saved':'')+'" id="sbtn-'+savedBtnId(i.url||i.title)+'" onclick="savedToggle(this,\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+platEnc+'\')\">'+(isSaved?'🔖 Saved':'🔖 Save')+'</button>';
   var noteBtn='<button class="note-btn'+(hasNote?' has-note':'')+'" id="note-btn-'+nid+'" onclick="toggleNote(\''+nid+'\',\''+urlEnc+'\',\''+titleEnc+'\')">'+(hasNote?'📝':'✎')+'</button>';
   // title with search highlight + watch word highlight
   var titleHtml=q?highlightMatch(i.title,q):escHtml(i.title);
@@ -1256,7 +1351,7 @@ function pulseItemHtml(i,q){
   var notePrev=noteText?'<div class="note-text" id="note-prev-'+nid+'" onclick="toggleNote(\''+nid+'\',\''+urlEnc+'\',\''+titleEnc+'\')" >📝 '+escHtml(noteText.slice(0,80))+'</div>':'<div class="note-text" id="note-prev-'+nid+'" style="display:none"></div>';
   var classes='pulse-item'+(viral?' viral':'')+(watchHit?' watch-hit':'')+(seen?' seen-item':'');
   var openLink='href="'+escHtml(i.url)+'" target="_blank" rel="noopener" onclick="markSeen(\''+urlEnc+'\')"';
-  return '<div class="'+classes+'">'+pulseBadge(i.platform)+'<div class="pulse-item-body"><div class="pulse-item-title"><a '+openLink+'>'+titleHtml+'</a>'+viralTag+multiTag+velTag+'</div><div class="pulse-item-meta">'+metaHtml+'&nbsp;·&nbsp;'+ago+'</div>'+notePrev+noteWrap+'<div class="pulse-item-actions">'+launchBtn+saveBtn+noteBtn+'</div></div></div>';
+  return '<div class="'+classes+'">'+pulseBadge(i.platform)+'<div class="pulse-item-body"><div class="pulse-item-title"><a '+openLink+'>'+titleHtml+'</a>'+viralTag+multiTag+velTag+'</div><div class="pulse-item-meta">'+metaHtml+'&nbsp;·&nbsp;'+ago+'</div>'+notePrev+noteWrap+'<div class="pulse-item-actions">'+launchBtn+starBtn+saveBtn+noteBtn+'</div></div></div>';
 }
 function highlightMatch(text,q){
   if(!q)return escHtml(text);
@@ -1428,7 +1523,30 @@ function genTweetF(coin,hook,title,meta,platform){
 }
 
 /* ══════════════════════════════════════════════════════════
-   ████  SAVED COLLECTION  ████
+   ████  STARRED COLLECTION (★ Star button)  ████
+   ══════════════════════════════════════════════════════════ */
+var _starred=[];
+try{var _stv=localStorage.getItem('tr_starred');if(_stv)_starred=JSON.parse(_stv);}catch(e){}
+
+function starredKey(url,title){return(url&&url.length>5?url:(title||'')).slice(0,120);}
+function starredHas(key){var k=starredKey(key,'');return _starred.some(function(s){return s.key===k;});}
+
+function starToggle(btn,title,meta,url,platform){
+  var key=starredKey(url,title);
+  var idx=_starred.findIndex(function(s){return s.key===key;});
+  if(idx>=0){
+    _starred.splice(idx,1);
+    btn.textContent='☆';btn.classList.remove('starred');
+  } else {
+    _starred.unshift({key:key,title:title,meta:meta,url:url,platform:platform,savedAt:Date.now()});
+    btn.textContent='★';btn.classList.add('starred');
+  }
+  try{localStorage.setItem('tr_starred',JSON.stringify(_starred));}catch(e){}
+  starredUpdateCount();
+}
+
+/* ══════════════════════════════════════════════════════════
+   ████  SAVED COLLECTION (🔖 Save button)  ████
    ══════════════════════════════════════════════════════════ */
 var _saved=[];
 try{var _sv=localStorage.getItem('tr_saved');if(_sv)_saved=JSON.parse(_sv);}catch(e){}
@@ -1442,14 +1560,13 @@ function savedToggle(btn,title,meta,url,platform){
   var idx=_saved.findIndex(function(s){return s.key===key;});
   if(idx>=0){
     _saved.splice(idx,1);
-    btn.textContent='☆ Save';btn.classList.remove('saved');
+    btn.textContent='🔖 Save';btn.classList.remove('saved');
   } else {
     _saved.unshift({key:key,title:title,meta:meta,url:url,platform:platform,savedAt:Date.now()});
-    btn.textContent='⭐ Saved';btn.classList.add('saved');
+    btn.textContent='🔖 Saved';btn.classList.add('saved');
   }
   try{localStorage.setItem('tr_saved',JSON.stringify(_saved));}catch(e){}
   savedUpdateCount();
-  starredUpdateCount();
 }
 
 function savedClearAll(){
