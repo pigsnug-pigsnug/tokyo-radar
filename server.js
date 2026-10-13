@@ -211,126 +211,153 @@ async function fetchXTrends() {
 }
 
 async function fetchYouTube() {
-  const countries = [
+  const now = Date.now();
+  const titleMap = new Map();
+
+  // Use Invidious public instances — they proxy YouTube's trending API
+  const invidiousHosts = [
+    'https://inv.nadeko.net',
+    'https://yewtu.be',
+    'https://id.420129.xyz',
+    'https://invidious.privacyredirect.com',
+    'https://invidious.nerdvpn.de',
+  ];
+  const regions = [
     {code:'US',label:'🇺🇸'},{code:'GB',label:'🇬🇧'},{code:'IN',label:'🇮🇳'},
     {code:'JP',label:'🇯🇵'},{code:'BR',label:'🇧🇷'},{code:'DE',label:'🇩🇪'},
-    {code:'FR',label:'🇫🇷'},{code:'AU',label:'🇦🇺'},{code:'KR',label:'🇰🇷'},{code:'MX',label:'🇲🇽'}
+    {code:'KR',label:'🇰🇷'},{code:'MX',label:'🇲🇽'},
   ];
-  const now = Date.now();
-  const titleMap = new Map(); // normalized title -> {item, countries[], labels[]}
 
-  const results = await Promise.allSettled(countries.map(c =>
-    fetch(`https://www.youtube.com/feeds/videos.xml?chart=most_popular&regionCode=${c.code}`, {
-      headers: { 'User-Agent': CHROME_UA, 'Accept': 'application/xml,text/xml,*/*' },
-      redirect: 'follow', signal: AbortSignal.timeout(8000)
-    }).then(r => { if (!r.ok) throw new Error(r.status); return r.text().then(xml => ({xml, c})); })
-  ));
+  // Try each Invidious host until one works
+  for (const host of invidiousHosts) {
+    try {
+      // Fetch trending for first region to test host
+      const testRes = await fetch(`${host}/api/v1/trending?region=US&type=default`, {
+        headers: { 'User-Agent': CHROME_UA, 'Accept': 'application/json' },
+        redirect: 'follow', signal: AbortSignal.timeout(8000)
+      });
+      if (!testRes.ok) { console.error(`YouTube Invidious ${host} => ${testRes.status}`); continue; }
+      const testData = await testRes.json();
+      if (!Array.isArray(testData) || !testData.length) continue;
 
-  for (const r of results) {
-    if (r.status !== 'fulfilled') continue;
-    const {xml, c} = r.value;
-    const entries = parseXmlItems(xml, 'entry');
-    for (const e of entries) {
-      const title = getTag(e, 'title');
-      const videoId = getTag(e, 'yt:videoId') || (getAttr(e,'link','href')||'').match(/v=([^&]+)/)?.[1];
-      const author = getTag(e, 'name') || getTag(e, 'author');
-      const published = getTag(e, 'published') || getTag(e, 'updated');
-      if (!title || !videoId) continue;
-      const url = `https://www.youtube.com/watch?v=${videoId}`;
-      const key = title.toLowerCase().trim().slice(0, 60);
-      if (titleMap.has(key)) {
-        const ex = titleMap.get(key);
-        if (!ex.countries.includes(c.code)) { ex.countries.push(c.code); ex.labels.push(c.label); }
-      } else {
-        const seenAt = published ? new Date(published).getTime() : now;
-        titleMap.set(key, {
-          item: { platform: 'YouTube', title, meta: author ? `by ${author}` : 'YouTube', url, tags: ['youtube'], score: 0, seenAt: isNaN(seenAt) ? now : seenAt, lastSeen: now },
-          countries: [c.code], labels: [c.label]
-        });
+      // Host works — fetch all regions in parallel
+      const regionResults = await Promise.allSettled(regions.map(r =>
+        fetch(`${host}/api/v1/trending?region=${r.code}&type=default`, {
+          headers: { 'User-Agent': CHROME_UA, 'Accept': 'application/json' },
+          redirect: 'follow', signal: AbortSignal.timeout(8000)
+        }).then(res => res.ok ? res.json() : []).then(data => ({data, r}))
+      ));
+
+      for (const result of regionResults) {
+        if (result.status !== 'fulfilled') continue;
+        const {data, r} = result.value;
+        if (!Array.isArray(data)) continue;
+        for (const v of data) {
+          const title = v.title || '';
+          const videoId = v.videoId || '';
+          const author = v.author || '';
+          if (!title || !videoId) continue;
+          const url = `https://www.youtube.com/watch?v=${videoId}`;
+          const key = title.toLowerCase().trim().slice(0, 80);
+          if (titleMap.has(key)) {
+            const ex = titleMap.get(key);
+            if (!ex.countries.includes(r.code)) { ex.countries.push(r.code); ex.labels.push(r.label); }
+          } else {
+            titleMap.set(key, {
+              item: { platform: 'YouTube', title, meta: author ? `by ${author}` : 'YouTube', url, tags: ['youtube'], score: v.viewCount || 0, seenAt: now, lastSeen: now },
+              countries: [r.code], labels: [r.label]
+            });
+          }
+        }
       }
-    }
+
+      const items = [];
+      for (const {item, countries: cs, labels} of titleMap.values()) {
+        const global = cs.length >= 2;
+        item.meta = (global ? '🌍 ' + labels.join('') + ' · ' : labels[0] + ' · ') + item.meta;
+        if (global) item.tags.push('worldwide');
+        items.push(item);
+      }
+      items.sort((a,b) => {
+        const ag = a.tags.includes('worldwide') ? 1 : 0, bg = b.tags.includes('worldwide') ? 1 : 0;
+        if (bg !== ag) return bg - ag;
+        return b.score - a.score;
+      });
+      console.log(`YouTube OK via ${host}: ${items.length} videos (${items.filter(i=>i.tags.includes('worldwide')).length} worldwide)`);
+      return items.slice(0, 50);
+    } catch(e) { console.error(`YouTube Invidious ${host} error:`, e.message); }
   }
 
-  const items = [];
-  for (const {item, countries: cs, labels} of titleMap.values()) {
-    const global = cs.length >= 2;
-    item.meta = (global ? '🌍 ' + labels.join('') + ' · ' : labels[0] + ' · ') + item.meta;
-    if (global) item.tags.push('worldwide');
-    items.push(item);
-  }
-  // Sort: worldwide first, then by recency
-  items.sort((a,b) => {
-    const ag = a.tags.includes('worldwide') ? 1 : 0;
-    const bg = b.tags.includes('worldwide') ? 1 : 0;
-    if (bg !== ag) return bg - ag;
-    return b.seenAt - a.seenAt;
-  });
-  console.log(`YouTube OK: ${items.length} videos (${items.filter(i=>i.tags.includes('worldwide')).length} worldwide)`);
-  return items.slice(0, 50);
+  console.error('YouTube: all Invidious instances failed');
+  return [];
 }
 
 async function fetchTikTok() {
   const now = Date.now();
+
+  // Source 1: trends24.in also has TikTok section — skip, try gettrends.io
+  // Source 2: tiktok-trending via Google Trends search interest (keywords from Google)
+  // Source 3: Scrape tiktok creative center via public endpoint
   const sources = [
-    'https://tokboard.com/',
-    'https://www.tiktok.com/discover',
+    { url: 'https://ads.tiktok.com/business/creativecenter/trends/homepage/pc/en', name: 'TikTok Creative Center' },
+    { url: 'https://www.tiktok.com/discover', name: 'TikTok Discover' },
+    { url: 'https://trends24.in/worldwide/', name: 'trends24 worldwide' },
   ];
 
-  // Try tokboard first
+  // Try tiktok creative center public trending hashtags API
   try {
-    const res = await fetch('https://tokboard.com/', {
-      headers: { 'User-Agent': CHROME_UA, 'Accept': 'text/html,*/*', 'Accept-Language': 'en-US,en;q=0.9' },
+    const res = await fetch('https://ads.tiktok.com/creative_radar_api/v1/popular_trend/hashtag/list?limit=20&page=1&period=7&country_code=US', {
+      headers: { 'User-Agent': CHROME_UA, 'Accept': 'application/json', 'Referer': 'https://ads.tiktok.com/business/creativecenter/trends/homepage/pc/en' },
       redirect: 'follow', signal: AbortSignal.timeout(8000)
     });
     if (res.ok) {
+      const json = await res.json();
+      const list = json?.data?.list || json?.list || [];
+      if (list.length) {
+        const items = list.map(h => {
+          const tag = (h.hashtag_name || h.name || '').replace(/^#/, '');
+          const count = h.publish_cnt || h.video_count || '';
+          return { platform: 'TikTok', title: '#' + tag, meta: count ? `${Number(count).toLocaleString()} videos` : 'Trending on TikTok', url: `https://www.tiktok.com/tag/${encodeURIComponent(tag)}`, tags: ['tiktok'], score: count || 0, seenAt: now, lastSeen: now };
+        }).filter(i => i.title.length > 1);
+        if (items.length) { console.log(`TikTok OK via Creative Center API: ${items.length} items`); return items; }
+      }
+    }
+  } catch(e) { console.error('TikTok Creative Center error:', e.message); }
+
+  // Fallback: scrape gettrending.io or similar
+  const fallbackUrls = [
+    'https://gettrending.io/tiktok/',
+    'https://www.trendingtopics.live/tiktok-trending-hashtags/',
+  ];
+  for (const url of fallbackUrls) {
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': CHROME_UA, 'Accept': 'text/html,*/*', 'Accept-Language': 'en-US,en;q=0.9' },
+        redirect: 'follow', signal: AbortSignal.timeout(8000)
+      });
+      if (!res.ok) { console.error(`TikTok ${url} => ${res.status}`); continue; }
       const html = await res.text();
       const items = [];
       const seen = new Set();
-      // tokboard shows hashtag trends — try multiple patterns
       const patterns = [
+        /<a[^>]+href="[^"]*tiktok\.com\/tag\/([^"/?]+)"[^>]*>/gi,
+        /href="\/tag\/([A-Za-z][A-Za-z0-9]{2,})"[^>]*>/gi,
         /#([A-Za-z][A-Za-z0-9]{2,})/g,
-        /class="[^"]*hashtag[^"]*"[^>]*>#?([A-Za-z][A-Za-z0-9]{2,})/gi,
-        /trending[^>]*>\s*#?([A-Za-z][A-Za-z0-9]{2,})/gi,
-        /<a[^>]+href="[^"]*tag[^"]*"[^>]*>#?([A-Za-z][A-Za-z0-9]{2,})/gi,
-        /data-[a-z]+=["']#?([A-Za-z][A-Za-z0-9]{2,})["']/gi,
       ];
+      const skipWords = new Set('the and for with you your are was this that new hot top trending viral views likes comments shares videos tiktok home page search fyp foryou foryoupage'.split(' '));
       for (const rx of patterns) {
         let m; rx.lastIndex = 0;
-        while ((m = rx.exec(html)) !== null && items.length < 30) {
-          const tag = m[1].trim();
-          const skip = 'the and for with you your are was this that new hot top trending viral views likes comments shares videos tiktok tokboard home page search';
-          if (tag.length < 3 || skip.split(' ').includes(tag.toLowerCase()) || seen.has(tag.toLowerCase())) continue;
+        while ((m = rx.exec(html)) !== null && items.length < 25) {
+          const tag = decodeURIComponent(m[1]).trim().replace(/^#/, '');
+          if (tag.length < 3 || skipWords.has(tag.toLowerCase()) || seen.has(tag.toLowerCase())) continue;
           seen.add(tag.toLowerCase());
-          items.push({ platform: 'TikTok', title: '#' + tag, meta: 'Trending on TikTok', url: `https://www.tiktok.com/tag/${tag}`, tags: ['tiktok'], score: 0, seenAt: now, lastSeen: now });
+          items.push({ platform: 'TikTok', title: '#' + tag, meta: 'Trending on TikTok', url: `https://www.tiktok.com/tag/${encodeURIComponent(tag)}`, tags: ['tiktok'], score: 0, seenAt: now, lastSeen: now });
         }
-        if (items.length >= 15) break;
+        if (items.length >= 10) break;
       }
-      if (items.length >= 5) { console.log(`TikTok OK via tokboard: ${items.length} items`); return items; }
-      console.error('TikTok tokboard: parsed only', items.length, 'items');
-    } else { console.error('TikTok tokboard:', res.status); }
-  } catch(e) { console.error('TikTok tokboard error:', e.message); }
-
-  // Fallback: trendpopular.com
-  try {
-    const res = await fetch('https://trendpopular.com/tiktok-trends/', {
-      headers: { 'User-Agent': CHROME_UA, 'Accept': 'text/html,*/*' },
-      redirect: 'follow', signal: AbortSignal.timeout(8000)
-    });
-    if (res.ok) {
-      const html = await res.text();
-      const items = [];
-      const seen = new Set();
-      const rx = /<h[2-4][^>]*>([^<]{5,80})<\/h[2-4]>/gi;
-      let m;
-      while ((m = rx.exec(html)) !== null && items.length < 20) {
-        const title = m[1].trim();
-        if (seen.has(title.toLowerCase())) continue;
-        seen.add(title.toLowerCase());
-        items.push({ platform: 'TikTok', title, meta: 'Trending on TikTok', url: `https://www.tiktok.com/search?q=${encodeURIComponent(title)}`, tags: ['tiktok'], score: 0, seenAt: now, lastSeen: now });
-      }
-      if (items.length) { console.log(`TikTok OK via trendpopular: ${items.length} items`); return items; }
-    }
-  } catch(e) { console.error('TikTok trendpopular error:', e.message); }
+      if (items.length >= 5) { console.log(`TikTok OK via ${url}: ${items.length} items`); return items; }
+    } catch(e) { console.error(`TikTok ${url} error:`, e.message); }
+  }
 
   console.error('TikTok: all sources failed');
   return [];
