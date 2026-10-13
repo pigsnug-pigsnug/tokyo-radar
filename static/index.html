@@ -253,6 +253,10 @@ tr:last-child td{border-bottom:none}
 #db-badge.none{background:var(--warn-soft);color:var(--warn)}
 
 /* ── SCROLL TO TOP ── */
+/* Bin toast */
+#bin-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--panel);border:1px solid var(--line2);border-radius:8px;padding:8px 18px;font-family:var(--mono);font-size:12px;color:var(--ink);z-index:9999;opacity:0;pointer-events:none;transition:all .25s;box-shadow:0 4px 18px rgba(0,0,0,.18);white-space:nowrap}
+#bin-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#bin-toast a{color:var(--brand);cursor:pointer;text-decoration:underline;margin-left:8px}
 #scroll-top{position:fixed;bottom:28px;right:22px;z-index:9000;width:42px;height:42px;border-radius:50%;border:1px solid var(--line2);background:var(--panel);color:var(--muted);font-size:18px;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,.12);transition:background .15s,color .15s,opacity .2s}
 #scroll-top.visible{display:flex}
 #scroll-top:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
@@ -427,6 +431,7 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
     <button class="tb-tab" onclick="switchTab('notes')">✎ Notes <span id="notes-tab-count" style="display:none;font-size:10px;background:var(--blue);color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
     <button class="tb-tab" onclick="switchTab('saved')">🔖 Saved <span id="saved-tab-count" style="display:none;font-size:10px;background:var(--brand);color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
     <button class="tb-tab" onclick="switchTab('history')">Log</button>
+    <button class="tb-tab" onclick="switchTab('bin')">🗑 Bin <span id="bin-tab-count" style="display:none;font-size:10px;background:#6b7280;color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
     <button class="tb-tab" onclick="switchTab('desk')">Desk</button>
   </div>
   <div id="theme-bar">
@@ -441,6 +446,7 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
 
 <!-- ── SCROLL TO TOP ── -->
 <button id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">↑</button>
+<div id="bin-toast"></div>
 
 <!-- ── PULSE PANEL ── -->
 <div id="pulse-panel" class="tab-panel active">
@@ -603,6 +609,19 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
   </div>
 </div>
 
+<!-- ── BIN PANEL ── -->
+<div id="bin-panel" class="tab-panel">
+  <div class="saved-toolbar">
+    <span class="sv-title">🗑 BIN</span>
+    <span class="sv-count" id="bin-count">0 items</span>
+    <button class="sv-clear" onclick="binPurgeAll()" title="Permanently delete everything in the bin">Empty bin</button>
+  </div>
+  <div style="padding:10px 20px 0;font-size:12px;color:var(--muted);font-family:var(--mono)">Items you cleared — restore them or empty the bin to delete permanently.</div>
+  <div class="saved-list" id="bin-list">
+    <div class="saved-empty"><span>🗑</span>Bin is empty.<br>Cleared stars, saves, notes and multi-signals appear here first.</div>
+  </div>
+</div>
+
 <!-- ── DESK PANEL ── -->
 <div id="desk-panel" class="tab-panel">
   <nav class="desk-rail">
@@ -685,7 +704,7 @@ window.addEventListener('keydown',function(e){
 var _activeTab='pulse';
 function switchTab(t){
   _activeTab=t;
-  var tabOrder=['pulse','radar','multi','starred','notes','saved','history','desk'];
+  var tabOrder=['pulse','radar','multi','starred','notes','saved','history','bin','desk'];
   document.querySelectorAll('.tb-tab').forEach(function(b,i){
     b.classList.toggle('active',tabOrder[i]===t);
   });
@@ -699,6 +718,7 @@ function switchTab(t){
   if(t==='notes')notesRender();
   if(t==='history')historyRender();
   if(t==='multi')multiRender();
+  if(t==='bin')binRender();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -747,6 +767,7 @@ function appInit(){
   starredUpdateCount();
   notesUpdateCount();
   multiUpdateCount();
+  binUpdateCount();
   scrollTopInit();
   morningDigestInit();
 }
@@ -754,6 +775,16 @@ function appInit(){
 /* ══════════════════════════════════════════════════════════
    SCROLL TO TOP
    ══════════════════════════════════════════════════════════ */
+var _binToastTimer=null;
+function showBinToast(msg){
+  var el=document.getElementById('bin-toast');
+  if(!el)return;
+  el.innerHTML=escHtml(msg)+' <a onclick="switchTab(\'bin\')">View Bin →</a>';
+  el.classList.add('show');
+  clearTimeout(_binToastTimer);
+  _binToastTimer=setTimeout(function(){el.classList.remove('show');},4000);
+}
+
 function scrollTopInit(){
   var btn=document.getElementById('scroll-top');
   if(!btn)return;
@@ -922,9 +953,7 @@ function buildMultiSignalMap(items){
       _multiDetected[k]=Date.now();
     }
   });
-  // Keep only last 30 days to avoid unbounded growth
-  var cutoff=Date.now()-30*24*3600000;
-  Object.keys(_multiDetected).forEach(function(k){if(_multiDetected[k]<cutoff)delete _multiDetected[k];});
+  // No expiry — multi-signals persist forever
   try{localStorage.setItem('tr_multi',JSON.stringify(_multiDetected));}catch(e){}
   return map;
 }
@@ -1017,10 +1046,12 @@ function starredRender(){
 
 function starredClearAll(){
   if(!_starred.length)return;
-  if(!confirm('Clear all '+_starred.length+' starred items?'))return;
+  var n=_starred.length;
+  binAdd('starred',_starred.slice());
   _starred=[];
   try{localStorage.setItem('tr_starred','[]');}catch(e){}
   starredRender();starredUpdateCount();
+  showBinToast(n+' star'+(n===1?'':'s')+' moved to Bin');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1069,12 +1100,14 @@ function multiRender(){
 }
 
 function multiClearAll(){
-  var n=Object.keys(_multiDetected).length;
-  if(!n)return;
-  if(!confirm('Clear all '+n+' multi-signal records?'))return;
+  var keys=Object.keys(_multiDetected);
+  if(!keys.length)return;
+  var binItems=keys.map(function(k){return{key:k,ts:_multiDetected[k],title:k.split('::').slice(1).join('::'),platform:k.split('::')[0]};});
+  binAdd('multi',binItems);
   _multiDetected={};
   try{localStorage.setItem('tr_multi','{}');}catch(e){}
   multiRender();multiUpdateCount();
+  showBinToast('Multi-signals moved to Bin');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1113,22 +1146,25 @@ function notesRender(){
 }
 
 function notesDeleteKey(key){
+  binAdd('note',[{key:key,text:_notes[key]||'',title:(_notesTitles&&_notesTitles[key])||key}]);
   delete _notes[key];
   delete _notesTitles[key];
   try{localStorage.setItem('tr_notes',JSON.stringify(_notes));}catch(e){}
   try{localStorage.setItem('tr_notes_titles',JSON.stringify(_notesTitles));}catch(e){}
-  notesRender();
+  notesRender();notesUpdateCount();
   pulseRender();
 }
 
 function notesClearAll(){
-  var n=Object.keys(_notes).filter(function(k){return _notes[k]&&_notes[k].trim();}).length;
-  if(!n)return;
-  if(!confirm('Delete all '+n+' notes?'))return;
+  var keys=Object.keys(_notes).filter(function(k){return _notes[k]&&_notes[k].trim();});
+  if(!keys.length)return;
+  var binItems=keys.map(function(k){return{key:k,text:_notes[k],title:(_notesTitles&&_notesTitles[k])||k};});
+  binAdd('note',binItems);
   _notes={};_notesTitles={};
   try{localStorage.setItem('tr_notes','{}');}catch(e){}
   try{localStorage.setItem('tr_notes_titles','{}');}catch(e){}
-  notesRender();
+  notesRender();notesUpdateCount();
+  showBinToast('Notes moved to Bin');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1523,6 +1559,106 @@ function genTweetF(coin,hook,title,meta,platform){
 }
 
 /* ══════════════════════════════════════════════════════════
+   🗑  BIN — soft-delete store
+   ══════════════════════════════════════════════════════════ */
+var _bin=[];
+try{var _bv=localStorage.getItem('tr_bin');if(_bv)_bin=JSON.parse(_bv);}catch(e){}
+
+function binSave(){try{localStorage.setItem('tr_bin',JSON.stringify(_bin));}catch(e){}}
+
+// Move items into bin. type = 'starred'|'saved'|'note'|'multi'
+function binAdd(type,items){
+  var ts=Date.now();
+  items.forEach(function(item){
+    _bin.unshift({type:type,item:item,deletedAt:ts});
+  });
+  binSave();
+  binUpdateCount();
+}
+
+function binUpdateCount(){
+  var n=_bin.length;
+  var badge=document.getElementById('bin-tab-count');
+  if(badge){badge.textContent=n;badge.style.display=n?'':'none';}
+  var cnt=document.getElementById('bin-count');
+  if(cnt)cnt.textContent=n+' item'+(n===1?'':'s');
+}
+
+function binRestore(idx){
+  var entry=_bin[idx];
+  if(!entry)return;
+  _bin.splice(idx,1);
+  binSave();binUpdateCount();
+  var i=entry.item;
+  if(entry.type==='starred'){
+    if(!starredHas(i.url||i.title)){
+      _starred.unshift(i);
+      try{localStorage.setItem('tr_starred',JSON.stringify(_starred));}catch(e){}
+      starredUpdateCount();
+    }
+  } else if(entry.type==='saved'){
+    if(!savedHas(i.url||i.title)){
+      _saved.unshift(i);
+      try{localStorage.setItem('tr_saved',JSON.stringify(_saved));}catch(e){}
+      savedUpdateCount();
+    }
+  } else if(entry.type==='note'){
+    _notes[i.key]=i.text;_notesTitles[i.key]=i.title;
+    try{localStorage.setItem('tr_notes',JSON.stringify(_notes));}catch(e){}
+    try{localStorage.setItem('tr_notes_titles',JSON.stringify(_notesTitles));}catch(e){}
+    notesUpdateCount();
+  } else if(entry.type==='multi'){
+    _multiDetected[i.key]=i.ts;
+    try{localStorage.setItem('tr_multi',JSON.stringify(_multiDetected));}catch(e){}
+    multiUpdateCount();
+  }
+  binRender();
+}
+
+function binPurge(idx){
+  _bin.splice(idx,1);
+  binSave();binUpdateCount();binRender();
+}
+
+function binPurgeAll(){
+  if(!_bin.length)return;
+  if(!confirm('Permanently delete all '+_bin.length+' items in the bin?'))return;
+  _bin=[];binSave();binUpdateCount();binRender();
+}
+
+function binRender(){
+  var el=document.getElementById('bin-list');
+  if(!el)return;
+  binUpdateCount();
+  if(!_bin.length){
+    el.innerHTML='<div class="saved-empty"><span>🗑</span>Bin is empty.</div>';
+    return;
+  }
+  var typeIcon={starred:'★',saved:'🔖',note:'📝',multi:'⚡'};
+  var typeLabel={starred:'Star',saved:'Save',note:'Note',multi:'Multi'};
+  el.innerHTML=_bin.map(function(entry,idx){
+    var i=entry.item;
+    var title=i.title||i.key||'';
+    var ago=Math.round((Date.now()-entry.deletedAt)/60000);
+    var agoStr=ago<60?ago+'m ago':Math.round(ago/60)+'h ago';
+    var icon=typeIcon[entry.type]||'?';
+    var label=typeLabel[entry.type]||entry.type;
+    return '<div class="pulse-item" style="opacity:.85">'+
+      '<div class="pulse-item-body">'+
+        '<div class="pulse-item-title" style="display:flex;align-items:center;gap:6px">'+
+          '<span style="font-size:11px;padding:1px 6px;border-radius:4px;background:var(--panel);border:1px solid var(--line2);font-family:var(--mono);color:var(--muted)">'+icon+' '+label+'</span>'+
+          (i.url?'<a href="'+escHtml(i.url)+'" target="_blank" rel="noopener">'+escHtml(title)+'</a>':escHtml(title))+
+        '</div>'+
+        '<div class="pulse-item-meta">Deleted '+agoStr+(i.platform?' · '+escHtml(i.platform):'')+'</div>'+
+        '<div class="pulse-item-actions">'+
+          '<button class="launch-btn" style="background:rgba(96,165,250,.1);border-color:#60a5fa;color:#60a5fa" onclick="binRestore('+idx+')">↩ Restore</button>'+
+          '<button class="save-btn" onclick="binPurge('+idx+')" style="border-color:var(--bad);color:var(--bad)">✕ Delete forever</button>'+
+        '</div>'+
+      '</div></div>';
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
    ████  STARRED COLLECTION (★ Star button)  ████
    ══════════════════════════════════════════════════════════ */
 var _starred=[];
@@ -1535,6 +1671,7 @@ function starToggle(btn,title,meta,url,platform){
   var key=starredKey(url,title);
   var idx=_starred.findIndex(function(s){return s.key===key;});
   if(idx>=0){
+    binAdd('starred',[_starred[idx]]);
     _starred.splice(idx,1);
     btn.textContent='☆';btn.classList.remove('starred');
   } else {
@@ -1571,10 +1708,11 @@ function savedToggle(btn,title,meta,url,platform){
 
 function savedClearAll(){
   if(!_saved.length)return;
-  if(!confirm('Clear all '+_saved.length+' saved items?'))return;
+  binAdd('saved',_saved.slice());
   _saved=[];
   try{localStorage.setItem('tr_saved','[]');}catch(e){}
   savedRender();savedUpdateCount();
+  showBinToast('Saved items moved to Bin');
 }
 
 function savedUpdateCount(){
