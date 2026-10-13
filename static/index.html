@@ -72,6 +72,8 @@ a{color:inherit}
 .badge-google{background:var(--blue);color:#fff}
 .badge-devto{background:#3D3D3F;color:#fff}
 .badge-x{background:#000;color:#fff}
+.badge-youtube{background:#FF0000;color:#fff}
+.badge-tiktok{background:linear-gradient(135deg,#010101 0%,#69C9D0 50%,#EE1D52 100%);color:#fff}
 /* Viral green flash */
 .pulse-item.viral{background:rgba(0,230,80,.07);border-left:3px solid #00E650;padding-left:11px;animation:viralPulse 2.5s ease-in-out infinite}
 @keyframes viralPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,230,80,.0)}50%{box-shadow:0 0 12px 2px rgba(0,230,80,.18)}}
@@ -300,6 +302,8 @@ tr:last-child td{border-bottom:none}
       <button onclick="setPulseFilter('Google Trends',this)">Trends</button>
       <button onclick="setPulseFilter('Dev.to',this)">Dev.to</button>
       <button onclick="setPulseFilter('X Trends',this)">X</button>
+      <button onclick="setPulseFilter('YouTube',this)">▶ YT</button>
+      <button onclick="setPulseFilter('TikTok',this)">TikTok</button>
     </div>
     <div class="pulse-filter-group" id="pulse-time-filters">
       <button class="active" onclick="setPulseTime('all',this)">All time</button>
@@ -528,9 +532,14 @@ function isViralGoogle(item){
   if(unit==='M')n*=1000000;
   return n>=500000;
 }
+function isViralYouTube(item){
+  // worldwide tag means 2+ countries
+  return (item.tags||[]).includes('worldwide');
+}
 function isViral(item){
   if(item.platform==='Reddit')return isViralReddit(item);
   if(item.platform==='Google Trends')return isViralGoogle(item);
+  if(item.platform==='YouTube')return isViralYouTube(item);
   return false;
 }
 
@@ -630,9 +639,9 @@ function setPulseTime(t,btn){
   pulseRender();
 }
 function pulseBadge(p){
-  var map={'Reddit':'badge-reddit','Hacker News':'badge-hn','Google Trends':'badge-google','Dev.to':'badge-devto','X Trends':'badge-x'};
+  var map={'Reddit':'badge-reddit','Hacker News':'badge-hn','Google Trends':'badge-google','Dev.to':'badge-devto','X Trends':'badge-x','YouTube':'badge-youtube','TikTok':'badge-tiktok'};
   var cls=map[p]||'badge-devto';
-  var label=p==='X Trends'?'𝕏':p==='Hacker News'?'HN':p;
+  var label=p==='X Trends'?'𝕏':p==='Hacker News'?'HN':p==='YouTube'?'▶ YT':p;
   return '<span class="pulse-item-badge '+cls+'">'+label+'</span>';
 }
 function pulseItemHtml(i,q){
