@@ -158,6 +158,7 @@ a{color:inherit}
 .radar-top .rt-btn:hover{background:#1C1E26;color:#E8EAF0}
 .radar-body{display:grid;grid-template-columns:1fr 320px;min-height:calc(100vh - var(--tab-h) - 49px)}
 @media(max-width:700px){.radar-body{grid-template-columns:1fr}}
+@media(max-width:760px){#radar-top-cols{grid-template-columns:1fr!important}}
 .radar-words{padding:16px 20px;overflow-y:auto}
 .radar-words h3{font-family:var(--display);font-size:15px;letter-spacing:1px;color:#7B8A9C;margin-bottom:12px}
 .rw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
@@ -501,55 +502,78 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
 
 <!-- ── RADAR PANEL ── -->
 <div id="radar-panel" class="tab-panel">
+  <!-- Status bar -->
   <div class="radar-top">
-    <span class="rt-sol" id="radar-sol">SOL —</span>
-    <span class="rt-status dead" id="radar-status">Disconnected</span>
-    <span class="rt-count" id="radar-count">0 coins</span>
-    <span class="rt-count" id="radar-rate" style="color:#5A6AFF">— /min</span>
+    <span class="rt-status dead" id="radar-status">● Disconnected</span>
+    <span class="rt-sol" id="radar-sol">1 SOL = —</span>
+    <span class="rt-count" id="radar-rate">— per minute</span>
     <div class="rt-spacer"></div>
-    <button class="rt-btn" onclick="radarCopyText()" title="Copy word data as JSON">Copy text</button>
-    <button class="rt-btn" onclick="radarExport()" title="Download JSON file">Download</button>
+    <span class="rt-count" id="radar-count" style="color:#6B7280">0 coins</span>
   </div>
-  <div class="radar-body">
-    <div style="display:flex;flex-direction:column;min-height:0">
-      <div class="radar-words">
-        <h3>HOT WORDS <span style="font-size:10px;color:#6B7280;font-family:var(--mono);font-weight:400">click to watch · ★ = picking up fast</span></h3>
-        <div class="rw-grid" id="rw-grid"><div style="color:#6B7280;font-family:var(--mono);font-size:12px">Connecting to Pump.fun…</div></div>
+
+  <!-- Info banner -->
+  <div style="background:rgba(31,79,216,.10);border:1px solid rgba(123,165,255,.25);border-radius:10px;padding:10px 16px;margin:12px 16px;font-size:13px;color:#A0A8B8;line-height:1.5">
+    <b style="color:#7BA5FF">Keep this tab open.</b> It listens to every new Pump.fun coin while it is open, counts the words, and checks any coin name you type. Closing the tab stops it from collecting. It remembers the last 6 hours it saw when you reopen it.
+  </div>
+
+  <!-- Top 2-col: Coin Check (left) + Live Stream (right) -->
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:16px;padding:0 16px 16px">
+
+    <!-- Coin Check panel -->
+    <div style="background:#0F1015;border:1px solid #1C1E26;border-radius:12px;padding:16px">
+      <div style="font-family:var(--display);font-size:13px;letter-spacing:1px;color:#7B8A9C;margin-bottom:12px">COIN CHECK</div>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <input type="text" id="radar-coin-q" placeholder="Type a coin name to check…" autocomplete="off"
+          style="flex:1;background:#08090A;border:1px solid #2A2D38;border-radius:8px;padding:9px 12px;color:#E8EAF0;font-size:14px;outline:none;min-width:0"
+          onkeydown="if(event.key==='Enter')radarCoinCheck()">
+        <button onclick="radarCoinCheck()"
+          style="padding:9px 18px;border-radius:8px;border:none;background:var(--brand);color:#fff;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">Check</button>
       </div>
-      <div class="radar-stream">
-        <h4>LIVE STREAM</h4>
-        <div class="stream-list" id="radar-stream"></div>
+      <div style="font-size:12px;color:#6B7280;font-family:var(--mono);margin-bottom:10px">
+        Looks up the name on Dexscreener (up to 30 results) and in the new coins this page has seen.
+        Copy limit: <input type="number" id="radar-limit" min="1" value="5"
+          style="width:52px;padding:2px 6px;background:#08090A;border:1px solid #2A2D38;border-radius:4px;color:#E8EAF0;font-size:12px;font-family:var(--mono);display:inline-block"
+          onchange="try{localStorage.setItem('tr_radar_limit',this.value)}catch(e){}">
+      </div>
+      <div id="radar-coin-result" style="color:#6B7280;font-size:13px;font-family:var(--mono)">Enter a coin name to get a Go / Skip verdict.</div>
+    </div>
+
+    <!-- Live Stream panel -->
+    <div style="background:#0F1015;border:1px solid #1C1E26;border-radius:12px;padding:16px;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-family:var(--display);font-size:13px;letter-spacing:1px;color:#7B8A9C">NEW COINS NOW</span>
+        <span id="radar-rate-badge" style="background:#1C1E26;border:1px solid #2A2D38;border-radius:999px;padding:3px 12px;font-size:12px;font-family:var(--mono);color:#E8EAF0">0 per minute</span>
+      </div>
+      <div id="radar-stream" style="flex:1;overflow-y:auto;max-height:340px;display:flex;flex-direction:column;gap:2px;font-size:12.5px;font-family:var(--mono)">
+        <div style="color:#6B7280">Waiting for coins…</div>
       </div>
     </div>
-    <div class="radar-side">
-      <div class="rs-section">
-        <h4>COIN CHECK</h4>
-        <div class="rs-coin-input">
-          <input type="text" id="radar-coin-q" placeholder="type a name to check…" onkeydown="if(event.key==='Enter')radarCoinCheck()">
-          <button onclick="radarCoinCheck()">Go</button>
+  </div>
+
+  <!-- Hot Words full-width -->
+  <div style="margin:0 16px 16px;background:#0F1015;border:1px solid #1C1E26;border-radius:12px;padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <span style="font-family:var(--display);font-size:13px;letter-spacing:1px;color:#7B8A9C">HOT WORDS</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;gap:6px">
+          <input type="text" id="radar-watch-q" placeholder="Add a watch word. It flashes when it moves."
+            style="background:#08090A;border:1px solid #2A2D38;border-radius:6px;padding:5px 10px;color:#E8EAF0;font-size:12px;font-family:var(--mono);outline:none;width:260px"
+            onkeydown="if(event.key==='Enter')radarAddWatch()">
+          <button onclick="radarAddWatch()"
+            style="padding:5px 14px;border-radius:6px;border:1px solid #2A2D38;background:#1C1E26;color:#E8EAF0;font-size:12px;font-family:var(--mono);cursor:pointer">Watch</button>
         </div>
-        <div style="font-size:11px;color:#6B7280;font-family:var(--mono);margin-bottom:6px">
-          Copy limit: <input type="number" id="radar-limit" min="1" value="5" style="width:48px;padding:2px 5px;background:#0F1015;border:1px solid #2A2D38;border-radius:4px;color:#E8EAF0;font-size:11px;font-family:var(--mono)" onchange="try{localStorage.setItem('tr_radar_limit',this.value)}catch(e){}">
-        </div>
-        <div id="radar-coin-result" style="color:#6B7280;font-size:12px;font-family:var(--mono)">Enter a coin name to get a Go / Skip verdict.</div>
-      </div>
-      <div class="rs-section">
-        <h4>WATCH WORDS</h4>
-        <div class="rs-coin-input">
-          <input type="text" id="radar-watch-q" placeholder="word to track" onkeydown="if(event.key==='Enter')radarAddWatch()">
-          <button onclick="radarAddWatch()">Add</button>
-        </div>
-        <div class="radar-watch-list" id="radar-watch-list"></div>
-      </div>
-      <div class="rs-section">
-        <h4>LEGEND</h4>
-        <div style="font-size:11px;color:#6B7280;font-family:var(--mono);line-height:1.8">
-          <div><span style="color:var(--brand)">■</span> 30 min &nbsp;<span style="color:#5A6AFF">■</span> 2 h &nbsp;<span style="color:#2A2D38">■</span> 6 h</div>
-          <div style="color:#FFD600">★ picking up (3× avg)</div>
-          <div>Click word to watch/unwatch</div>
-        </div>
+        <button onclick="radarCopyText()"
+          style="padding:5px 12px;border-radius:6px;border:1px solid #2A2D38;background:#1C1E26;color:#A0A8B8;font-size:12px;font-family:var(--mono);cursor:pointer">Copy radar text</button>
+        <button onclick="radarExport()"
+          style="padding:5px 12px;border-radius:6px;border:1px solid #2A2D38;background:#1C1E26;color:#A0A8B8;font-size:12px;font-family:var(--mono);cursor:pointer">Download radar file</button>
       </div>
     </div>
+    <div class="radar-watch-list" id="radar-watch-list" style="margin-bottom:10px"></div>
+    <div style="font-size:11px;color:#6B7280;font-family:var(--mono);margin-bottom:10px">
+      Speed compares the last 30 min with the usual pace of the last 6 h. Above 3× means the word is picking up.
+      &nbsp;·&nbsp; <span style="color:var(--brand)">■</span> 30 min &nbsp;<span style="color:#5A6AFF">■</span> 2 h &nbsp;<span style="color:#2A2D38">■</span> 6 h &nbsp;·&nbsp; <span style="color:#FFD600">★ picking up (3× avg)</span>
+    </div>
+    <div class="rw-grid" id="rw-grid"><div style="color:#6B7280;font-family:var(--mono);font-size:12px">Connecting to Pump.fun…</div></div>
   </div>
 </div>
 
@@ -1812,6 +1836,7 @@ function radarStatus(ok,msg){
   var el=document.getElementById('radar-status');
   if(el){el.textContent=ok?'● '+msg:'○ '+msg;el.className='rt-status '+(ok?'live':'dead')}
 }
+
 function rdrTokens(e){
   var seen={};(e.n+' '+e.s).toLowerCase().split(/[^a-z0-9]+/).forEach(function(w){
     if(w.length>=3&&!/^\d+$/.test(w)&&!STOP[w])seen[w]=1});
@@ -1828,7 +1853,9 @@ function radarRender(){
   var now2=Date.now();
   var per=rdrEvents.filter(function(e){return now2-e.t<60000}).length;
   var rateEl=document.getElementById('radar-rate');
-  if(rateEl)rateEl.textContent=per+' /min';
+  if(rateEl)rateEl.textContent=per+' per minute';
+  var badgeEl=document.getElementById('radar-rate-badge');
+  if(badgeEl)badgeEl.textContent=per+' per minute';
   var c=rdrCounts();
   var words=Object.keys(c).filter(function(w){return c[w].c360>=2||rdrWatch.indexOf(w)>-1});
   rdrWatch.forEach(function(w){if(!c[w]){c[w]={c30:0,c120:0,c360:0};words.push(w)}});
@@ -1872,25 +1899,32 @@ function radarAddWatch(){
 }
 var _streamItems=[];
 function streamPush(d){
-  _streamItems.unshift({n:d.name,s:d.symbol||'',t:Date.now()});
+  _streamItems.unshift({n:d.name,s:d.symbol||'',m:d.mint||'',t:Date.now()});
   if(_streamItems.length>80)_streamItems=_streamItems.slice(0,80);
   var el=document.getElementById('radar-stream');
   if(!el)return;
-  el.innerHTML=_streamItems.slice(0,30).map(function(i){
-    var ago=Math.round((Date.now()-i.t)/1000);var agoStr=ago<60?ago+'s':Math.round(ago/60)+'m';
-    return '<div class="stream-item"><span class="si-name">'+escHtml(i.n)+'</span><span class="si-sym">$'+escHtml(i.s)+'</span><span class="si-time">'+agoStr+'</span></div>';
+  // Clear "Waiting" placeholder on first coin
+  if(el.firstChild&&el.firstChild.textContent==='Waiting for coins…')el.innerHTML='';
+  el.innerHTML=_streamItems.slice(0,40).map(function(i){
+    var mintLink=i.m?'https://pump.fun/coin/'+escHtml(i.m):'#';
+    return '<div style="border-bottom:1px dashed #1C1E26;padding:3px 0;display:flex;gap:8px;align-items:baseline">'+
+      '<b style="color:#E8EAF0;font-family:var(--mono);flex-shrink:0">'+escHtml(i.s)+'</b>'+
+      '<span style="color:#A0A8B8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(i.n)+'</span>'+
+      '<a href="'+mintLink+'" target="_blank" rel="noopener" style="color:var(--brand);flex-shrink:0;font-size:11px">open</a>'+
+    '</div>';
   }).join('');
 }
 function radarFetchSol(){
   fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd').then(function(r){return r.json()}).then(function(d){
-    rdrSolUsd=d?.solana?.usd;
+    rdrSolUsd=d&&d.solana&&d.solana.usd;
     var el=document.getElementById('radar-sol');
-    if(el&&rdrSolUsd)el.textContent='SOL $'+rdrSolUsd.toFixed(2);
+    if(el&&rdrSolUsd)el.innerHTML='1 SOL = <b style="font-size:16px">$'+rdrSolUsd.toFixed(2)+'</b>';
   }).catch(function(){
-    fetch('https://price.jup.ag/v6/price?ids=SOL').then(function(r){return r.json()}).then(function(d){
-      rdrSolUsd=d?.data?.SOL?.price;
+    fetch('https://lite-api.jup.ag/price/v3?ids=So11111111111111111111111111111111111111112').then(function(r){return r.json()}).then(function(d){
+      var k=d&&d['So11111111111111111111111111111111111111112'];
+      rdrSolUsd=k&&(k.usdPrice||k.price);
       var el=document.getElementById('radar-sol');
-      if(el&&rdrSolUsd)el.textContent='SOL $'+rdrSolUsd.toFixed(2);
+      if(el&&rdrSolUsd)el.innerHTML='1 SOL = <b style="font-size:16px">$'+(+rdrSolUsd).toFixed(2)+'</b>';
     }).catch(function(){});
   });
 }
