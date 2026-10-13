@@ -418,16 +418,18 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
   <div class="tb-tabs">
     <button class="tb-tab active" onclick="switchTab('pulse')">Pulse</button>
     <button class="tb-tab" onclick="switchTab('radar')">Radar</button>
+    <button class="tb-tab" onclick="switchTab('starred')">★ Stars <span id="starred-tab-count" style="display:none;font-size:10px;background:var(--brand);color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
+    <button class="tb-tab" onclick="switchTab('notes')">✎ Notes <span id="notes-tab-count" style="display:none;font-size:10px;background:var(--blue);color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
     <button class="tb-tab" onclick="switchTab('saved')">Saved <span id="saved-tab-count" style="display:none;font-size:10px;background:var(--brand);color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
     <button class="tb-tab" onclick="switchTab('history')">Log</button>
     <button class="tb-tab" onclick="switchTab('desk')">Desk</button>
   </div>
   <div id="theme-bar">
-    <button class="th-btn active" id="th-light" onclick="setTheme('light')">☀</button>
-    <button class="th-btn" id="th-dark" onclick="setTheme('dark')">☾</button>
-    <button class="th-btn" id="th-system" onclick="setTheme('system')">⊙</button>
+    <button class="th-btn active" id="th-light" onclick="setTheme('light')" title="Light mode">☀</button>
+    <button class="th-btn" id="th-dark" onclick="setTheme('dark')" title="Dark mode">☾</button>
+    <button class="th-btn" id="th-system" onclick="setTheme('system')" title="System theme">⊙</button>
     <div class="th-sep"></div>
-    <button class="th-btn" id="th-rbw" onclick="setTheme('rbw')" style="color:#FF0022;border-color:#FF0022">●</button>
+    <button class="th-btn" id="th-rbw" onclick="setTheme('rbw')" title="Red-Black-White mode" style="font-size:10px;letter-spacing:.5px;font-weight:700">RBW</button>
   </div>
   <div class="tb-clock" id="ist-clock">--:--:-- IST</div>
 </div>
@@ -477,26 +479,6 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
     </div>
     <div class="ptb-status" id="pulse-status">Loading…</div>
   </div>
-  <!-- ── STARRED + NOTES BOXES ── -->
-  <div class="pulse-boxes" id="pulse-boxes" style="display:none">
-    <!-- Starred -->
-    <div class="pulse-box" id="pb-starred">
-      <div class="pulse-box-header" onclick="pbToggle('pb-starred')">
-        <span class="pulse-box-title">⭐ STARRED <span class="pulse-box-count" id="pb-star-count"></span></span>
-        <span class="pulse-box-toggle" id="pb-starred-arrow">▲</span>
-      </div>
-      <div class="pulse-box-body open" id="pb-starred-body"></div>
-    </div>
-    <!-- Notes -->
-    <div class="pulse-box" id="pb-notes">
-      <div class="pulse-box-header" onclick="pbToggle('pb-notes')">
-        <span class="pulse-box-title">📝 NOTES <span class="pulse-box-count" id="pb-notes-count"></span></span>
-        <span class="pulse-box-toggle" id="pb-notes-arrow">▲</span>
-      </div>
-      <div class="pulse-box-body open" id="pb-notes-body"></div>
-    </div>
-  </div>
-
   <div class="pulse-list" id="pulse-list">
     <div class="pulse-spinner">Fetching pulse data…</div>
   </div>
@@ -551,15 +533,39 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
   </div>
 </div>
 
+<!-- ── STARRED PANEL ── -->
+<div id="starred-panel" class="tab-panel">
+  <div class="saved-toolbar">
+    <span class="sv-title">⭐ STARRED</span>
+    <span class="sv-count" id="starred-count">0 items</span>
+    <button class="sv-clear" onclick="starredClearAll()">Clear all</button>
+  </div>
+  <div class="saved-list" id="starred-list">
+    <div class="saved-empty"><span>⭐</span>Nothing starred yet.<br>Hit ☆ Save on any Pulse item.</div>
+  </div>
+</div>
+
+<!-- ── NOTES PANEL ── -->
+<div id="notes-panel" class="tab-panel">
+  <div class="saved-toolbar">
+    <span class="sv-title">📝 NOTES</span>
+    <span class="sv-count" id="notes-count">0 notes</span>
+    <button class="sv-clear" onclick="notesClearAll()">Clear all</button>
+  </div>
+  <div class="saved-list" id="notes-list">
+    <div class="saved-empty"><span>📝</span>No notes yet.<br>Hit ✎ on any Pulse item to add one.</div>
+  </div>
+</div>
+
 <!-- ── SAVED PANEL ── -->
 <div id="saved-panel" class="tab-panel">
   <div class="saved-toolbar">
-    <span class="sv-title">⭐ SAVED</span>
+    <span class="sv-title">🔖 SAVED</span>
     <span class="sv-count" id="saved-count">0 items</span>
     <button class="sv-clear" onclick="savedClearAll()">Clear all</button>
   </div>
   <div class="saved-list" id="saved-list">
-    <div class="saved-empty"><span>⭐</span>Nothing saved yet.<br>Hit the bookmark on any Pulse item.</div>
+    <div class="saved-empty"><span>🔖</span>Nothing saved yet.<br>Hit ☆ Save on any Pulse item.</div>
   </div>
 </div>
 
@@ -657,7 +663,7 @@ window.addEventListener('keydown',function(e){
 var _activeTab='pulse';
 function switchTab(t){
   _activeTab=t;
-  var tabOrder=['pulse','radar','saved','history','desk'];
+  var tabOrder=['pulse','radar','starred','notes','saved','history','desk'];
   document.querySelectorAll('.tb-tab').forEach(function(b,i){
     b.classList.toggle('active',tabOrder[i]===t);
   });
@@ -667,6 +673,8 @@ function switchTab(t){
   if(t==='desk'){panel.style.display='grid';}
   else if(panel){panel.style.display='';}
   if(t==='saved')savedRender();
+  if(t==='starred')starredRender();
+  if(t==='notes')notesRender();
   if(t==='history')historyRender();
 }
 
@@ -713,7 +721,8 @@ function appInit(){
   savedUpdateCount();
   historyUpdateCount();
   pwbRender();
-  pbRenderAll();
+  starredUpdateCount();
+  notesUpdateCount();
   scrollTopInit();
   morningDigestInit();
 }
@@ -857,7 +866,7 @@ function submitNote(noteId,url,title){
     if(text.trim()){btn.classList.add('has-note');btn.textContent='📝';}
     else{btn.classList.remove('has-note');btn.textContent='✎';}
   }
-  pbNotesRender();
+  notesUpdateCount();
   // show note preview if exists
   var prev=document.getElementById('note-prev-'+noteId);
   if(prev){prev.style.display=text.trim()?'block':'none';if(text.trim())prev.textContent='📝 '+text.trim().slice(0,80);}
@@ -946,106 +955,102 @@ function historyClear(){
 }
 
 /* ══════════════════════════════════════════════════════════
-   PULSE IN-PANEL BOXES (Starred + Notes)
+   STARRED TAB PANEL
    ══════════════════════════════════════════════════════════ */
-function pbToggle(id){
-  var body=document.getElementById(id+'-body');
-  var arrow=document.getElementById(id+'-arrow');
-  if(!body)return;
-  var isOpen=body.classList.contains('open');
-  body.classList.toggle('open',!isOpen);
-  if(arrow)arrow.textContent=isOpen?'▼':'▲';
+function starredUpdateCount(){
+  var n=_saved.length;
+  var badge=document.getElementById('starred-tab-count');
+  if(badge){badge.textContent=n;badge.style.display=n?'':'none';}
+  var cnt=document.getElementById('starred-count');
+  if(cnt)cnt.textContent=n+' item'+(n===1?'':'s');
 }
 
-function pbStarredRender(){
-  var wrapper=document.getElementById('pulse-boxes');
-  var body=document.getElementById('pb-starred-body');
-  var cnt=document.getElementById('pb-star-count');
-  if(!body)return;
-  if(cnt)cnt.textContent=_saved.length?'('+_saved.length+')':'';
+function starredRender(){
+  var el=document.getElementById('starred-list');
+  if(!el)return;
+  starredUpdateCount();
   if(!_saved.length){
-    if(body)body.innerHTML='<div style="font-size:12px;color:var(--muted);font-family:var(--mono);padding:6px 0">Nothing starred yet — hit ☆ Save on any item.</div>';
-    // Hide box if both starred+notes empty
-    pbMaybeHideWrapper();return;
+    el.innerHTML='<div class="saved-empty"><span>⭐</span>Nothing starred yet.<br>Hit ☆ Save on any Pulse item.</div>';
+    return;
   }
-  body.innerHTML=_saved.slice(0,15).map(function(i){
+  el.innerHTML=_saved.map(function(i){
+    var ago=i.savedAt?Math.round((Date.now()-i.savedAt)/60000)+'m ago':'';
     var titleEnc=escHtml(i.title||'').replace(/'/g,'&#39;');
     var metaEnc=escHtml(i.meta||'').replace(/'/g,'&#39;');
     var urlEnc=escHtml(i.url||'').replace(/'/g,'&#39;');
     var platEnc=escHtml(i.platform||'');
-    return '<div class="pb-star-item">'+
-      pulseBadge(i.platform||'')+
-      '<a class="pb-star-title" href="'+escHtml(i.url||'')+'" target="_blank" rel="noopener" onclick="markSeen(\''+urlEnc+'\')">'+escHtml(i.title||'')+'</a>'+
-      '<button class="pb-star-del" onclick="pbStarRemove(\''+urlEnc+'\',\''+titleEnc+'\',\''+metaEnc+'\',\''+platEnc+'\')">✕ unstar</button>'+
-    '</div>';
-  }).join('')+(
-    _saved.length>15?'<div style="font-size:11px;color:var(--muted);font-family:var(--mono);padding:6px 0">…and '+(_saved.length-15)+' more in Saved tab</div>':''
-  );
-  pbShowWrapper();
+    var key=savedKey(i.url,i.title);
+    var btnId=savedBtnId(key);
+    return '<div class="pulse-item">'+pulseBadge(i.platform||'')+'<div class="pulse-item-body">'+
+      '<div class="pulse-item-title"><a href="'+escHtml(i.url||'')+'" target="_blank" rel="noopener" onclick="markSeen(\''+urlEnc+'\')">'+escHtml(i.title||'')+'</a></div>'+
+      '<div class="pulse-item-meta">'+escHtml(i.meta||'')+'&nbsp;·&nbsp;saved '+ago+'</div>'+
+      '<div class="pulse-item-actions">'+
+        '<button class="launch-btn" onclick="openLaunchModal(\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+platEnc+'\')">🚀 Launch</button>'+
+        '<button class="save-btn saved" id="sbtn-'+btnId+'" onclick="savedToggle(this,\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+platEnc+'\');starredRender()">⭐ Saved</button>'+
+      '</div></div></div>';
+  }).join('');
 }
 
-function pbStarRemove(url,title,meta,platform){
-  var fakeBtn={textContent:'',classList:{remove:function(){},add:function(){}}};
-  savedToggle(fakeBtn,title,meta,url,platform);
-  pbStarredRender();
+function starredClearAll(){
+  if(!_saved.length)return;
+  if(!confirm('Clear all '+_saved.length+' starred items?'))return;
+  _saved=[];
+  try{localStorage.setItem('tr_saved','[]');}catch(e){}
+  starredRender();starredUpdateCount();savedUpdateCount();
 }
 
-function pbNotesRender(){
-  var body=document.getElementById('pb-notes-body');
-  var cnt=document.getElementById('pb-notes-count');
-  if(!body)return;
-  // _notes keys are noteKey values (url or title). We store {key: {text, title}} in _notesMeta
-  // Build list from _notes — key is url/title, value is text
+/* ══════════════════════════════════════════════════════════
+   NOTES TAB PANEL
+   ══════════════════════════════════════════════════════════ */
+function notesUpdateCount(){
   var entries=Object.keys(_notes).filter(function(k){return _notes[k]&&_notes[k].trim();});
-  if(cnt)cnt.textContent=entries.length?'('+entries.length+')':'';
+  var n=entries.length;
+  var badge=document.getElementById('notes-tab-count');
+  if(badge){badge.textContent=n;badge.style.display=n?'':'none';}
+  var cnt=document.getElementById('notes-count');
+  if(cnt)cnt.textContent=n+' note'+(n===1?'':'s');
+}
+
+function notesRender(){
+  var el=document.getElementById('notes-list');
+  if(!el)return;
+  notesUpdateCount();
+  var entries=Object.keys(_notes).filter(function(k){return _notes[k]&&_notes[k].trim();});
   if(!entries.length){
-    body.innerHTML='<div style="font-size:12px;color:var(--muted);font-family:var(--mono);padding:6px 0">No notes yet — hit ✎ on any item to add one.</div>';
-    pbMaybeHideWrapper();return;
+    el.innerHTML='<div class="saved-empty"><span>📝</span>No notes yet.<br>Hit ✎ on any Pulse item to add one.</div>';
+    return;
   }
-  body.innerHTML=entries.slice(0,20).map(function(k){
+  el.innerHTML=entries.map(function(k){
     var text=_notes[k]||'';
-    // Try to get the display title from _notesTitles map
     var displayTitle=(_notesTitles&&_notesTitles[k])||k;
-    // If key looks like a URL, show just the domain or path end
     if(displayTitle.startsWith('http')){try{displayTitle=new URL(displayTitle).pathname.split('/').filter(Boolean).pop()||displayTitle;}catch(e){displayTitle=displayTitle.slice(0,60);}}
     var safeK=escHtml(k).replace(/'/g,'&#39;');
-    return '<div class="pb-note-item">'+
-      '<div class="pb-note-header">'+
-        '<span class="pb-note-title">'+escHtml(String(displayTitle).slice(0,80))+'</span>'+
-        '<button class="pb-note-del" onclick="pbNoteDelete(\''+safeK+'\')">✕ del</button>'+
-      '</div>'+
-      '<div class="pb-note-text">'+escHtml(text.slice(0,140))+'</div>'+
-    '</div>';
+    return '<div class="pulse-item"><div class="pulse-item-body">'+
+      '<div class="pulse-item-title">'+escHtml(String(displayTitle).slice(0,100))+'</div>'+
+      '<div class="pulse-item-meta" style="white-space:pre-wrap">'+escHtml(text)+'</div>'+
+      '<div class="pulse-item-actions">'+
+        '<button class="save-btn" onclick="notesDeleteKey(\''+safeK+'\')">✕ Delete note</button>'+
+      '</div></div></div>';
   }).join('');
-  pbShowWrapper();
 }
 
-function pbMaybeHideWrapper(){
-  // Only hide the whole wrapper if both boxes are empty
-  var s=_saved.length;
-  var n=Object.keys(_notes).filter(function(k){return _notes[k]&&_notes[k].trim();}).length;
-  var w=document.getElementById('pulse-boxes');
-  if(w)w.style.display=(s||n)?'':'none';
-}
-function pbShowWrapper(){
-  var w=document.getElementById('pulse-boxes');
-  if(w)w.style.display='';
-}
-
-function pbNoteDelete(key){
+function notesDeleteKey(key){
   delete _notes[key];
   delete _notesTitles[key];
   try{localStorage.setItem('tr_notes',JSON.stringify(_notes));}catch(e){}
   try{localStorage.setItem('tr_notes_titles',JSON.stringify(_notesTitles));}catch(e){}
-  pbNotesRender();
-  pbMaybeHideWrapper();
+  notesRender();
   pulseRender();
 }
 
-function pbRenderAll(){
-  pbStarredRender();
-  pbNotesRender();
-  pbMaybeHideWrapper();
+function notesClearAll(){
+  var n=Object.keys(_notes).filter(function(k){return _notes[k]&&_notes[k].trim();}).length;
+  if(!n)return;
+  if(!confirm('Delete all '+n+' notes?'))return;
+  _notes={};_notesTitles={};
+  try{localStorage.setItem('tr_notes','{}');}catch(e){}
+  try{localStorage.setItem('tr_notes_titles','{}');}catch(e){}
+  notesRender();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1125,7 +1130,8 @@ function pulseFetch(){
     if(el)el.textContent='Updated just now · '+all.length+' items'+(viral?' · 🔥 '+viral+' viral':'');
     pulsePage=0;
     pulseRender();
-    pbRenderAll();
+    starredUpdateCount();
+    notesUpdateCount();
     maybeShowMorningDigest(all);
   }).catch(function(){
     if(el)el.textContent='Fetch error — retrying';
@@ -1443,7 +1449,7 @@ function savedToggle(btn,title,meta,url,platform){
   }
   try{localStorage.setItem('tr_saved',JSON.stringify(_saved));}catch(e){}
   savedUpdateCount();
-  pbStarredRender();
+  starredUpdateCount();
 }
 
 function savedClearAll(){
