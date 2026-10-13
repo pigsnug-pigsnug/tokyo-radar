@@ -505,13 +505,15 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
     <span class="rt-sol" id="radar-sol">SOL —</span>
     <span class="rt-status dead" id="radar-status">Disconnected</span>
     <span class="rt-count" id="radar-count">0 coins</span>
+    <span class="rt-count" id="radar-rate" style="color:#5A6AFF">— /min</span>
     <div class="rt-spacer"></div>
-    <button class="rt-btn" onclick="radarExport()">Export JSON</button>
+    <button class="rt-btn" onclick="radarCopyText()" title="Copy word data as JSON">Copy text</button>
+    <button class="rt-btn" onclick="radarExport()" title="Download JSON file">Download</button>
   </div>
   <div class="radar-body">
     <div style="display:flex;flex-direction:column;min-height:0">
       <div class="radar-words">
-        <h3>HOT WORDS</h3>
+        <h3>HOT WORDS <span style="font-size:10px;color:#6B7280;font-family:var(--mono);font-weight:400">click to watch · ★ = picking up fast</span></h3>
         <div class="rw-grid" id="rw-grid"><div style="color:#6B7280;font-family:var(--mono);font-size:12px">Connecting to Pump.fun…</div></div>
       </div>
       <div class="radar-stream">
@@ -523,10 +525,13 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
       <div class="rs-section">
         <h4>COIN CHECK</h4>
         <div class="rs-coin-input">
-          <input type="text" id="radar-coin-q" placeholder="name / symbol / CA" onkeydown="if(event.key==='Enter')radarCoinCheck()">
+          <input type="text" id="radar-coin-q" placeholder="type a name to check…" onkeydown="if(event.key==='Enter')radarCoinCheck()">
           <button onclick="radarCoinCheck()">Go</button>
         </div>
-        <div id="radar-coin-result" style="color:#6B7280">Enter a token to look up.</div>
+        <div style="font-size:11px;color:#6B7280;font-family:var(--mono);margin-bottom:6px">
+          Copy limit: <input type="number" id="radar-limit" min="1" value="5" style="width:48px;padding:2px 5px;background:#0F1015;border:1px solid #2A2D38;border-radius:4px;color:#E8EAF0;font-size:11px;font-family:var(--mono)" onchange="try{localStorage.setItem('tr_radar_limit',this.value)}catch(e){}">
+        </div>
+        <div id="radar-coin-result" style="color:#6B7280;font-size:12px;font-family:var(--mono)">Enter a coin name to get a Go / Skip verdict.</div>
       </div>
       <div class="rs-section">
         <h4>WATCH WORDS</h4>
@@ -1776,6 +1781,7 @@ var MIN=60000,H2=2*3600000,H6=6*3600000;
 function radarInit(){
   try{var saved=localStorage.getItem('tr_events');if(saved)rdrEvents=JSON.parse(saved)}catch(e){}
   try{var sw=localStorage.getItem('tr_watch');if(sw)rdrWatch=JSON.parse(sw)}catch(e){}
+  try{var lim=localStorage.getItem('tr_radar_limit');if(lim){var li=document.getElementById('radar-limit');if(li)li.value=lim;}}catch(e){}
   rdrConnect();
   radarFetchSol();
   setInterval(radarFetchSol,60000);
@@ -1818,6 +1824,11 @@ function rdrCounts(){
   return o;
 }
 function radarRender(){
+  // per-minute rate
+  var now2=Date.now();
+  var per=rdrEvents.filter(function(e){return now2-e.t<60000}).length;
+  var rateEl=document.getElementById('radar-rate');
+  if(rateEl)rateEl.textContent=per+' /min';
   var c=rdrCounts();
   var words=Object.keys(c).filter(function(w){return c[w].c360>=2||rdrWatch.indexOf(w)>-1});
   rdrWatch.forEach(function(w){if(!c[w]){c[w]={c30:0,c120:0,c360:0};words.push(w)}});
@@ -1883,33 +1894,82 @@ function radarFetchSol(){
     }).catch(function(){});
   });
 }
+function radarAgoStr(ms){var m=Math.round(ms/60000);if(m<1)return'<1 min';if(m<60)return m+' min';var h=Math.floor(m/60);if(h<48)return h+'h '+(m%60)+'m';return Math.floor(h/24)+' days'}
 function radarCoinCheck(){
   var q=(document.getElementById('radar-coin-q').value||'').trim();
   if(!q)return;
   var el=document.getElementById('radar-coin-result');
-  el.innerHTML='<span style="color:#6B7280">Looking up…</span>';
-  fetch('https://api.dexscreener.com/latest/dex/search?q='+encodeURIComponent(q)).then(function(r){return r.json()}).then(function(d){
-    var pairs=(d.pairs||[]).filter(function(p){return p.chainId==='solana'}).slice(0,3);
-    if(!pairs.length){el.innerHTML='<span style="color:#6B7280">No Solana pairs found.</span>';return}
-    el.innerHTML=pairs.map(function(p){
-      var ch=parseFloat(p.priceChange?.h24||0);var chCls=ch>0?'color:#00E676':ch<0?'color:#FF4444':'color:#6B7280';
-      return '<div style="margin-bottom:8px;padding:8px;border:1px solid #1C1E26;border-radius:6px">'+
-        '<div style="font-weight:700;color:#E8EAF0;font-family:var(--mono)">'+escHtml(p.baseToken?.symbol||'')+'<span style="color:#6B7280;font-weight:400"> '+escHtml(p.baseToken?.name||'')+'</span></div>'+
-        '<div style="'+chCls+';font-family:var(--mono);font-size:11px">$'+parseFloat(p.priceUsd||0).toPrecision(4)+' &nbsp;'+ch.toFixed(2)+'%</div>'+
-        '<div style="color:#6B7280;font-size:10px;font-family:var(--mono)">Vol: $'+Number(p.volume?.h24||0).toLocaleString()+'</div>'+
-        '<a href="'+p.url+'" target="_blank" style="color:var(--brand);font-size:11px;font-family:var(--mono)">View ↗</a>'+
-      '</div>';
-    }).join('');
-  }).catch(function(){el.innerHTML='<span style="color:#FF4444">Error fetching.</span>'});
+  var limit=+(document.getElementById('radar-limit').value)||5;
+  el.innerHTML='<span style="color:#6B7280">Checking…</span>';
+  var ql=q.toLowerCase();
+  var local=rdrEvents.filter(function(e){return(e.n+' '+e.s).toLowerCase().indexOf(ql)>-1});
+  fetch('https://api.dexscreener.com/latest/dex/search?q='+encodeURIComponent(q)).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){
+    var pairs=(j&&j.pairs||[]).filter(function(p){return p.chainId==='solana'&&p.baseToken&&((p.baseToken.name||'')+' '+(p.baseToken.symbol||'')).toLowerCase().indexOf(ql)>-1});
+    var seen={},uniq=[];pairs.forEach(function(p){var k=p.baseToken.address;if(!seen[k]){seen[k]=1;uniq.push(p)}});
+    uniq.sort(function(a,b){return(a.pairCreatedAt||Infinity)-(b.pairCreatedAt||Infinity)});
+    radarCoinShow(q,uniq,local,limit,null,el);
+  }).catch(function(){radarCoinShow(q,[],local,limit,'Could not reach Dexscreener.',el)});
 }
-function radarExport(){
+function radarCoinShow(q,uniq,local,limit,err,el){
+  var now=Date.now();
+  var oldestDex=uniq.length&&uniq[0].pairCreatedAt?uniq[0].pairCreatedAt:null;
+  var oldestLoc=local.length?local[0].t:null;
+  var oldest=[oldestDex,oldestLoc].filter(Boolean).sort(function(a,b){return a-b})[0]||null;
+  var copies=Math.max(uniq.length,local.length);
+  var age=oldest?(now-oldest)/60000:0;
+  var v,k;
+  if(!copies){v='Go';k='go'}
+  else if(age>=120){v='Skip';k='skip'}
+  else if(copies>limit){v='Tweak or skip';k='twist'}
+  else if(copies>limit/2||age>=75){v='Go with a twist';k='twist'}
+  else{v='Go';k='go'}
+  var why=!copies?'Nobody has this name yet.':age>=120?'First copy is 2h+ old. Crowd got there.':copies>limit?copies+' copies past your limit of '+limit+'. Need a new angle.':k==='twist'?'Getting crowded or late. Change the angle.':'Early and not crowded.';
+  var vtColors={go:'#0A9B45',twist:'#A86B0B',skip:'var(--brand)'};
+  var copyTxt=q+': '+copies+' copies, oldest '+(oldest?Math.round(age)+'m ago':'none');
+  el.innerHTML=
+    (err?'<div style="color:#FF4444;font-size:11px;margin-bottom:6px">'+escHtml(err)+'</div>':'')+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">'+
+      '<span style="font:800 18px/1 var(--body);text-transform:uppercase;padding:5px 11px;border-radius:7px;background:'+vtColors[k]+';color:#fff">'+v+'</span>'+
+      '<span style="font-size:12px;color:#A0A8B8">'+escHtml(why)+'</span>'+
+    '</div>'+
+    '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#6B7280;margin-bottom:8px">'+
+      '<div><span style="font:700 18px/1.1 var(--body);color:#E8EAF0;display:block">'+copies+'</span>copies found</div>'+
+      '<div><span style="font:700 18px/1.1 var(--body);color:#E8EAF0;display:block">'+(oldest?radarAgoStr(now-oldest):'none')+'</span>oldest copy</div>'+
+      '<div><span style="font:700 18px/1.1 var(--body);color:#E8EAF0;display:block">'+local.length+'</span>seen by radar</div>'+
+    '</div>'+
+    '<button onclick="radarCopyClip(\''+escHtml(copyTxt.replace(/'/g,'&#39;'))+'\')" style="padding:4px 10px;border-radius:5px;border:1px solid #2A2D38;background:#0F1015;color:#A0A8B8;font-size:11px;font-family:var(--mono);cursor:pointer;margin-bottom:8px">Copy numbers</button>'+
+    (uniq.length?'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">'+
+      '<thead><tr>'+
+        '<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #1C1E26;color:#6B7280;font-family:var(--mono);font-weight:500">Coin</th>'+
+        '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #1C1E26;color:#6B7280;font-family:var(--mono);font-weight:500">Age</th>'+
+        '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #1C1E26;color:#6B7280;font-family:var(--mono);font-weight:500">MCap</th>'+
+        '<th style="text-align:right;padding:4px 6px;border-bottom:1px solid #1C1E26;color:#6B7280;font-family:var(--mono);font-weight:500">24h Vol</th>'+
+      '</tr></thead><tbody>'+
+      uniq.slice(0,10).map(function(p){
+        return '<tr>'+
+          '<td style="padding:4px 6px;border-bottom:1px solid #0F1015"><a href="'+escHtml(p.url||'#')+'" target="_blank" style="color:#E8EAF0;text-decoration:none;font-family:var(--mono)"><b>'+escHtml(p.baseToken&&p.baseToken.symbol||'')+'</b></a> <span style="color:#6B7280">'+escHtml(p.baseToken&&p.baseToken.name||'')+'</span></td>'+
+          '<td style="padding:4px 6px;border-bottom:1px solid #0F1015;text-align:right;font-family:var(--mono);color:#A0A8B8">'+(p.pairCreatedAt?radarAgoStr(Date.now()-p.pairCreatedAt):'?')+'</td>'+
+          '<td style="padding:4px 6px;border-bottom:1px solid #0F1015;text-align:right;font-family:var(--mono);color:#A0A8B8">'+(p.marketCap?'$'+Math.round(p.marketCap).toLocaleString():'-')+'</td>'+
+          '<td style="padding:4px 6px;border-bottom:1px solid #0F1015;text-align:right;font-family:var(--mono);color:#A0A8B8">'+(p.volume&&p.volume.h24!=null?'$'+Math.round(p.volume.h24).toLocaleString():'-')+'</td>'+
+        '</tr>';
+      }).join('')+
+    '</tbody></table></div>':'');
+}
+function radarCopyClip(txt){
+  try{navigator.clipboard.writeText(txt).then(function(){},function(){var a=document.createElement('textarea');a.value=txt;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove()})}catch(e){}
+}
+function radarObj(){
   var c=rdrCounts();
   var words=Object.keys(c).filter(function(w){return c[w].c360>=2||rdrWatch.indexOf(w)>-1}).map(function(w){return{word:w,c30:c[w].c30,c120:c[w].c120,c360:c[w].c360}});
   rdrWatch.forEach(function(w){if(!c[w])words.push({word:w,c30:0,c120:0,c360:0})});
   words.sort(function(a,b){return b.c30-a.c30||b.c360-a.c360});
-  var obj={generated:new Date().toISOString(),solUsd:rdrSolUsd||undefined,words:words.slice(0,150)};
+  return{generated:new Date().toISOString(),solUsd:rdrSolUsd||undefined,words:words.slice(0,150)};
+}
+function radarCopyText(){radarCopyClip(JSON.stringify(radarObj()));}
+function radarExport(){
+  var obj=radarObj();
   var b=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
-  var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='radar-'+Date.now()+'.json';a.click();
+  var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='radar-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.json';a.click();
 }
 
 /* ══════════════════════════════════════════════════════════
