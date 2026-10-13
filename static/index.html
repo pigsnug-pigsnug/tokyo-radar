@@ -58,14 +58,55 @@ a{color:inherit}
 /* ════════════════════════════════════════════
    PULSE TAB
    ════════════════════════════════════════════ */
-#pulse-panel{min-height:calc(100vh - var(--tab-h));background:#08090A}
-/* Sticky filter bar — sticks right below the tab bar */
-.pulse-toolbar{display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid #1C1E26;flex-wrap:wrap;position:sticky;top:var(--tab-h);z-index:90;background:#08090A}
-.pulse-toolbar .ptb-status{font-size:12px;color:#6B7280;font-family:var(--mono)}
-.pulse-filter-group{display:flex;gap:6px;flex-wrap:wrap}
-.pulse-filter-group button{padding:4px 12px;border-radius:20px;border:1px solid #2A2D38;background:#0F1015;color:#A0A8B8;font-size:12px;font-weight:500;transition:all .15s}
-.pulse-filter-group button.active{background:var(--brand);color:#fff;border-color:var(--brand)}
-.pulse-list{max-width:820px;margin:0 auto;padding:12px 20px}
+/* ── PULSE PANEL: sidebar + feed layout ── */
+#pulse-panel{min-height:calc(100vh - var(--tab-h));background:#08090A;display:flex;flex-direction:row}
+/* Left sidebar */
+.pulse-sidebar{width:176px;flex-shrink:0;background:#0A0B0E;border-right:1px solid #1C1E26;position:sticky;top:var(--tab-h);height:calc(100vh - var(--tab-h));overflow-y:auto;display:flex;flex-direction:column;padding:10px 0}
+/* Watch section */
+.psb-watch{padding:8px 12px 6px;border-bottom:1px solid #1C1E26}
+.psb-watch-label{font-size:10px;font-weight:700;letter-spacing:1px;color:#6B7280;text-transform:uppercase;font-family:var(--mono);margin-bottom:6px}
+.psb-watch-row{display:flex;gap:5px;align-items:center}
+.psb-watch-input{flex:1;background:#08090A;border:1px solid #2A2D38;border-radius:6px;padding:5px 7px;font-family:var(--mono);font-size:11px;color:#E8EAF0;outline:none;min-width:0}
+.psb-watch-input:focus{border-color:var(--brand)}
+.psb-watch-add{width:22px;height:22px;border-radius:5px;border:none;background:var(--brand);color:#fff;font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;line-height:1}
+.psb-chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
+.psb-chip{padding:2px 7px;border-radius:10px;background:rgba(255,214,0,.12);border:1px solid rgba(255,214,0,.35);color:#FFD600;font-size:10px;font-family:var(--mono);cursor:pointer}
+.psb-chip:hover{background:#FFD600;color:#000}
+.psb-hits{font-size:10px;color:#FFD600;font-family:var(--mono);margin-top:4px}
+/* Search */
+.psb-search-wrap{padding:8px 10px;border-bottom:1px solid #1C1E26}
+.psb-search-inner{display:flex;align-items:center;background:#0F1015;border:1px solid #2A2D38;border-radius:7px;padding:0 8px;gap:5px}
+.psb-search-inner:focus-within{border-color:var(--brand)}
+.psb-search-icon{color:#6B7280;font-size:13px;flex-shrink:0}
+.psb-search{border:none;background:transparent;outline:none;font-family:var(--body);font-size:12px;color:#E8EAF0;padding:6px 0;flex:1;min-width:0;width:100%}
+.psb-search::placeholder{color:#6B7280}
+.psb-search-clear{border:none;background:transparent;color:#6B7280;font-size:12px;cursor:pointer;padding:0;line-height:1}
+/* Filter buttons */
+.psb-filters{padding:6px 0;flex:1}
+.psb-btn{width:100%;text-align:left;padding:7px 14px;border:none;background:transparent;color:#A0A8B8;font-size:12px;font-weight:500;cursor:pointer;transition:background .12s,color .12s;display:flex;align-items:center;justify-content:space-between;gap:4px}
+.psb-btn:hover{background:rgba(255,255,255,.04);color:#E8EAF0}
+.psb-btn.active{background:rgba(209,15,34,.12);color:#fff;font-weight:700;border-left:2px solid var(--brand)}
+.psb-btn .psb-count{font-family:var(--mono);font-size:10px;color:#6B7280}
+/* Divider before BIN */
+.psb-divider{height:1px;background:#1C1E26;margin:6px 10px}
+/* BIN button */
+.psb-bin-btn{width:100%;text-align:left;padding:7px 14px;border:none;background:transparent;color:#6B7280;font-size:11px;font-weight:700;letter-spacing:1.2px;cursor:pointer;transition:color .12s,background .12s;font-family:var(--mono);display:flex;align-items:center;gap:6px}
+.psb-bin-btn:hover{background:rgba(229,19,43,.08);color:var(--bad)}
+.psb-bin-btn .psb-bin-count{background:#3A3A3A;color:#A0A8B8;border-radius:8px;padding:1px 5px;font-size:10px}
+/* Status line */
+.psb-status{padding:6px 14px;font-size:10px;color:#6B7280;font-family:var(--mono);border-top:1px solid #1C1E26;margin-top:auto}
+/* Feed area */
+.pulse-feed-area{flex:1;min-width:0;overflow-y:auto}
+.pulse-search-info{font-size:12px;color:#6B7280;font-family:var(--mono);padding:8px 20px;border-bottom:1px solid #1C1E26}
+.pulse-list{padding:0 20px}
+/* hide old horizontal toolbar elements */
+.pulse-toolbar{display:none!important}
+.pulse-watch-bar{display:none!important}
+@media(max-width:700px){
+  .pulse-sidebar{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid #1C1E26;flex-direction:column}
+  #pulse-panel{flex-direction:column}
+  .pulse-feed-area{overflow-y:visible}
+}
 .pulse-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #1C1E26;align-items:flex-start;border-radius:6px;transition:background .2s}
 .pulse-item-badge{flex-shrink:0;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;font-family:var(--mono);white-space:nowrap}
 .badge-reddit{background:#FF4500;color:#fff}
@@ -428,12 +469,7 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
   <div class="tb-tabs">
     <button class="tb-tab active" onclick="switchTab('pulse')">Pulse</button>
     <button class="tb-tab" onclick="switchTab('radar')">Radar</button>
-    <button class="tb-tab" onclick="switchTab('multi')">⚡ Multi <span id="multi-tab-count" style="display:none;font-size:10px;background:#f97316;color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
-    <button class="tb-tab" onclick="switchTab('starred')">★ Stars <span id="starred-tab-count" style="display:none;font-size:10px;background:var(--brand);color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
-    <button class="tb-tab" onclick="switchTab('notes')">✎ Notes <span id="notes-tab-count" style="display:none;font-size:10px;background:var(--blue);color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
-    <button class="tb-tab" onclick="switchTab('saved')">🔖 Saved <span id="saved-tab-count" style="display:none;font-size:10px;background:var(--brand);color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
     <button class="tb-tab" onclick="switchTab('history')">Log</button>
-    <button class="tb-tab" onclick="switchTab('bin')">🗑 Bin <span id="bin-tab-count" style="display:none;font-size:10px;background:#6b7280;color:#fff;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle"></span></button>
     <button class="tb-tab" onclick="switchTab('desk')">Desk</button>
   </div>
   <div id="theme-bar">
@@ -452,53 +488,100 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
 
 <!-- ── PULSE PANEL ── -->
 <div id="pulse-panel" class="tab-panel active">
-  <div id="morning-digest">
-    <div class="md-header">
-      <span class="md-title">☀ MORNING DIGEST — TOP 5 FRESH</span>
-      <button class="md-close" onclick="closeMorningDigest()">✕</button>
+
+  <!-- ── LEFT SIDEBAR ── -->
+  <div class="pulse-sidebar">
+
+    <!-- Watch -->
+    <div class="psb-watch">
+      <div class="psb-watch-label">👁 Watch</div>
+      <div class="psb-watch-row">
+        <input type="text" class="psb-watch-input" id="pwb-input" placeholder="add keyword…" onkeydown="if(event.key==='Enter')pwbAdd()">
+        <button class="psb-watch-add" onclick="pwbAdd()">+</button>
+      </div>
+      <div class="psb-chips" id="pwb-chips"></div>
+      <div class="psb-hits" id="pwb-hits" style="display:none"></div>
     </div>
-    <div class="md-items" id="md-items"></div>
+
+    <!-- Search -->
+    <div class="psb-search-wrap">
+      <div class="psb-search-inner">
+        <span class="psb-search-icon">⌕</span>
+        <input type="text" id="pulse-search" class="psb-search" placeholder="Search anything you've seen…" oninput="setPulseSearch(this.value)" autocomplete="off" spellcheck="false">
+        <button class="psb-search-clear" id="pulse-search-clear" onclick="clearPulseSearch()" style="display:none">✕</button>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="psb-filters" id="pulse-filters">
+      <button class="psb-btn active" onclick="setSideFilter('all',this)">All</button>
+      <button class="psb-btn" onclick="setSideFilter('__multi',this)">⚡ Multi <span class="psb-count" id="psb-multi-count"></span></button>
+      <button class="psb-btn" onclick="setSideFilter('Reddit',this)">Reddit</button>
+      <button class="psb-btn" onclick="setSideFilter('X Trends',this)">X</button>
+      <button class="psb-btn" onclick="setSideFilter('TikTok',this)">TikTok</button>
+      <button class="psb-btn" onclick="setSideFilter('Dev.to',this)">Dev.to</button>
+      <button class="psb-btn" onclick="setSideFilter('Hacker News',this)">HN</button>
+      <button class="psb-btn" onclick="setSideFilter('Google Trends',this)">Trends</button>
+      <button class="psb-btn" onclick="setSideFilter('Al Jazeera',this)">AJ</button>
+      <button class="psb-btn" onclick="setSideFilter('__saved',this)">🔖 Saved <span class="psb-count" id="psb-saved-count"></span></button>
+      <button class="psb-btn" onclick="setSideFilter('__starred',this)">★ Stars <span class="psb-count" id="psb-stars-count"></span></button>
+      <button class="psb-btn" onclick="setSideFilter('__notes',this)">✎ Notes <span class="psb-count" id="psb-notes-count"></span></button>
+      <!-- Time filters -->
+      <div class="psb-divider" style="margin-top:4px"></div>
+      <button class="psb-btn active-time" id="psb-time-all" onclick="setSideTime('all',this)">All time</button>
+      <button class="psb-btn" id="psb-time-6h" onclick="setSideTime('6h',this)">Last 6h</button>
+      <button class="psb-btn" id="psb-time-12h" onclick="setSideTime('12h',this)">Last 12h</button>
+      <button class="psb-btn" id="psb-time-24h" onclick="setSideTime('24h',this)">Last 24h</button>
+    </div>
+
+    <!-- Spacer + BIN -->
+    <div class="psb-divider"></div>
+    <button class="psb-bin-btn" onclick="switchTab('bin')">🗑 BIN <span class="psb-bin-count" id="psb-bin-count" style="display:none"></span></button>
+
+    <!-- Status -->
+    <div class="psb-status" id="pulse-status">Loading…</div>
   </div>
-  <div class="pulse-watch-bar" id="pulse-watch-bar">
-    <span class="pwb-label">👁 WATCH:</span>
-    <div class="pwb-input-wrap">
-      <input type="text" class="pwb-input" id="pwb-input" placeholder="add keyword…" onkeydown="if(event.key==='Enter')pwbAdd()">
-      <button class="pwb-add" onclick="pwbAdd()">+</button>
+
+  <!-- ── FEED AREA ── -->
+  <div class="pulse-feed-area">
+    <div id="morning-digest">
+      <div class="md-header">
+        <span class="md-title">☀ MORNING DIGEST — TOP 5 FRESH</span>
+        <button class="md-close" onclick="closeMorningDigest()">✕</button>
+      </div>
+      <div class="md-items" id="md-items"></div>
     </div>
-    <div class="pwb-chips" id="pwb-chips"></div>
-    <span class="pwb-hits" id="pwb-hits" style="display:none"></span>
+    <!-- hidden old filter elements kept for JS compatibility -->
+    <div style="display:none">
+      <div class="pulse-watch-bar" id="pulse-watch-bar"></div>
+      <div class="pulse-toolbar">
+        <div class="pulse-filter-group" id="pulse-filters-old">
+          <button class="active" onclick="setPulseFilter('all',this)">All</button>
+          <button onclick="setPulseFilter('__starred',this)">Stars</button>
+          <button onclick="setPulseFilter('__multi',this)">Multi</button>
+          <button onclick="setPulseFilter('__saved',this)">Saved</button>
+          <button onclick="setPulseFilter('__notes',this)">Notes</button>
+          <button onclick="setPulseFilter('Reddit',this)">Reddit</button>
+          <button onclick="setPulseFilter('Hacker News',this)">HN</button>
+          <button onclick="setPulseFilter('Google Trends',this)">Trends</button>
+          <button onclick="setPulseFilter('Dev.to',this)">Dev.to</button>
+          <button onclick="setPulseFilter('X Trends',this)">X</button>
+          <button onclick="setPulseFilter('TikTok',this)">TikTok</button>
+          <button onclick="setPulseFilter('Al Jazeera',this)">AJ</button>
+        </div>
+        <div class="pulse-filter-group" id="pulse-time-filters">
+          <button class="active" onclick="setPulseTime('all',this)">All</button>
+          <button onclick="setPulseTime('6h',this)">6h</button>
+          <button onclick="setPulseTime('12h',this)">12h</button>
+          <button onclick="setPulseTime('24h',this)">24h</button>
+        </div>
+      </div>
+    </div>
+    <div class="pulse-list" id="pulse-list">
+      <div class="pulse-spinner">Fetching pulse data…</div>
+    </div>
   </div>
-  <div class="pulse-toolbar">
-    <div class="pulse-search-wrap">
-      <span class="pulse-search-icon">⌕</span>
-      <input type="text" id="pulse-search" class="pulse-search" placeholder="Search anything you've seen…" oninput="setPulseSearch(this.value)" autocomplete="off" spellcheck="false">
-      <button class="pulse-search-clear" id="pulse-search-clear" onclick="clearPulseSearch()" style="display:none">✕</button>
-    </div>
-    <div class="pulse-filter-group" id="pulse-filters">
-      <button class="active" onclick="setPulseFilter('all',this)">All</button>
-      <button onclick="setPulseFilter('__starred',this)">★ Stars</button>
-      <button onclick="setPulseFilter('__multi',this)">⚡ Multi</button>
-      <button onclick="setPulseFilter('__saved',this)">🔖 Saved</button>
-      <button onclick="setPulseFilter('__notes',this)">✎ Notes</button>
-      <button onclick="setPulseFilter('Reddit',this)">Reddit</button>
-      <button onclick="setPulseFilter('Hacker News',this)">HN</button>
-      <button onclick="setPulseFilter('Google Trends',this)">Trends</button>
-      <button onclick="setPulseFilter('Dev.to',this)">Dev.to</button>
-      <button onclick="setPulseFilter('X Trends',this)">X</button>
-      <button onclick="setPulseFilter('TikTok',this)">TikTok</button>
-      <button onclick="setPulseFilter('Al Jazeera',this)">AJ</button>
-    </div>
-    <div class="pulse-filter-group" id="pulse-time-filters">
-      <button class="active" onclick="setPulseTime('all',this)">All</button>
-      <button onclick="setPulseTime('6h',this)">6h</button>
-      <button onclick="setPulseTime('12h',this)">12h</button>
-      <button onclick="setPulseTime('24h',this)">24h</button>
-    </div>
-    <div class="ptb-status" id="pulse-status">Loading…</div>
-  </div>
-  <div class="pulse-list" id="pulse-list">
-    <div class="pulse-spinner">Fetching pulse data…</div>
-  </div>
+
 </div>
 
 <!-- ── RADAR PANEL ── -->
@@ -710,9 +793,9 @@ window.addEventListener('keydown',function(e){
 var _activeTab='pulse';
 function switchTab(t){
   _activeTab=t;
-  var tabOrder=['pulse','radar','multi','starred','notes','saved','history','bin','desk'];
-  document.querySelectorAll('.tb-tab').forEach(function(b,i){
-    b.classList.toggle('active',tabOrder[i]===t);
+  document.querySelectorAll('.tb-tab').forEach(function(b){
+    var fn=b.getAttribute('onclick')||'';
+    b.classList.toggle('active',fn.indexOf("'"+t+"'")>-1);
   });
   document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
   var panel=document.getElementById(t+'-panel');
@@ -1338,13 +1421,46 @@ function setPulseTime(t,btn){
   pulseTime=t;
   document.querySelectorAll('#pulse-time-filters button').forEach(function(b){b.classList.remove('active')});
   if(btn)btn.classList.add('active');
-  else{// find & activate the right button
+  else{
     var btns=document.querySelectorAll('#pulse-time-filters button');
     var map={'all':0,'6h':1,'12h':2,'24h':3};
     if(btns[map[t]])btns[map[t]].classList.add('active');
   }
   pulsePage=0;
   pulseRender();
+}
+/* ── Sidebar filter/time wrappers ── */
+function setSideFilter(f,btn){
+  pulseFilter=f;
+  document.querySelectorAll('.psb-filters .psb-btn').forEach(function(b){b.classList.remove('active')});
+  if(btn)btn.classList.add('active');
+  pulsePage=0;
+  pulseRender();
+}
+function setSideTime(t,btn){
+  pulseTime=t;
+  document.querySelectorAll('.psb-filters .psb-btn[id^="psb-time"]').forEach(function(b){b.classList.remove('active')});
+  if(btn)btn.classList.add('active');
+  pulsePage=0;
+  pulseRender();
+}
+/* ── Update sidebar badge counts ── */
+function updateSidebarCounts(){
+  try{
+    var starred=JSON.parse(localStorage.getItem('tr_starred')||'[]').length;
+    var saved=JSON.parse(localStorage.getItem('tr_saved')||'[]').length;
+    var notes=Object.keys(JSON.parse(localStorage.getItem('tr_notes')||'{}')).length;
+    var bin=JSON.parse(localStorage.getItem('tr_bin')||'[]').length;
+    var el;
+    el=document.getElementById('psb-stars-count');if(el)el.textContent=starred||'';
+    el=document.getElementById('psb-saved-count');if(el)el.textContent=saved||'';
+    el=document.getElementById('psb-notes-count');if(el)el.textContent=notes||'';
+    el=document.getElementById('psb-bin-count');
+    if(el){el.textContent=bin||'';el.style.display=bin?'inline':'none';}
+    // multi count
+    var multiItems=pulseItems.filter(function(i){return i._multi&&i._multi>1});
+    el=document.getElementById('psb-multi-count');if(el)el.textContent=multiItems.length||'';
+  }catch(e){}
 }
 function pulseBadge(p){
   var map={'Reddit':'badge-reddit','Hacker News':'badge-hn','Google Trends':'badge-google','Dev.to':'badge-devto','X Trends':'badge-x','TikTok':'badge-tiktok','Al Jazeera':'badge-aljazeera'};
@@ -1448,6 +1564,7 @@ function pulseRender(){
     s.style.cssText='height:1px';
     el.appendChild(s);
   }
+  updateSidebarCounts();
 }
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
