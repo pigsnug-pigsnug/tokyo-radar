@@ -422,6 +422,28 @@ html[data-theme="rbw"]{
 .note-btn{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:4px;border:1px solid #2A2D38;background:transparent;color:#A0A8B8;font-size:11px;font-weight:600;font-family:var(--mono);cursor:pointer;transition:all .15s}
 .note-btn:hover{border-color:var(--blue);color:var(--blue)}
 .note-btn.has-note{border-color:var(--blue);color:var(--blue);background:var(--blue-soft)}
+/* ── TWEET DRAFT ── */
+.tweet-draft-btn{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:4px;border:1px solid #2A2D38;background:transparent;color:#A0A8B8;font-size:11px;font-weight:600;font-family:var(--mono);cursor:pointer;transition:all .15s}
+.tweet-draft-btn:hover{border-color:#1DA1F2;color:#1DA1F2;background:rgba(29,161,242,.08)}
+/* tweet modal */
+#tweet-modal{display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px}
+#tweet-modal.open{display:flex}
+.tw-box{background:#111318;border:1px solid #2A2D38;border-radius:12px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:20px}
+.tw-box h3{margin:0 0 4px;font-size:15px;font-weight:700;color:#E8EAF0}
+.tw-source{font-size:12px;color:#6B7280;margin-bottom:14px;font-family:var(--mono)}
+.tw-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tw-tab{padding:4px 12px;border-radius:20px;border:1px solid #2A2D38;background:transparent;color:#A0A8B8;font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer;transition:all .15s;letter-spacing:.3px}
+.tw-tab.active,.tw-tab:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
+.tw-draft-area{width:100%;background:#0D0F13;border:1px solid #2A2D38;border-radius:8px;color:#E8EAF0;font:14px/1.6 -apple-system,sans-serif;padding:12px;resize:vertical;min-height:120px;box-sizing:border-box}
+.tw-draft-area:focus{outline:none;border-color:var(--brand)}
+.tw-char{font-size:11px;font-family:var(--mono);text-align:right;margin-top:4px}
+.tw-char.over{color:#FF4545}
+.tw-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.tw-copy-btn{padding:6px 16px;border-radius:6px;border:none;background:var(--brand);color:var(--brand-ink);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--mono)}
+.tw-open-btn{padding:6px 16px;border-radius:6px;border:1px solid #1DA1F2;background:transparent;color:#1DA1F2;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--mono)}
+.tw-close-btn{margin-left:auto;padding:6px 12px;border-radius:6px;border:1px solid #2A2D38;background:transparent;color:#6B7280;font-size:12px;cursor:pointer;font-family:var(--mono)}
+.tw-regen{padding:6px 12px;border-radius:6px;border:1px solid #2A2D38;background:transparent;color:#A0A8B8;font-size:12px;cursor:pointer;font-family:var(--mono)}
+.tw-regen:hover{border-color:var(--brand);color:var(--brand)}
 .note-inline{margin-top:6px;display:flex;gap:6px;align-items:flex-start}
 .note-inline textarea{flex:1;background:#0F1015;border:1px solid #2A2D38;border-radius:6px;padding:6px 8px;font-family:var(--body);font-size:12px;color:#E8EAF0;resize:none;min-height:54px;outline:none}
 .note-inline textarea:focus{border-color:var(--blue)}
@@ -824,6 +846,23 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
     </div>
   </nav>
   <main class="desk-main" id="desk-main"></main>
+</div>
+
+<!-- ── TWEET DRAFT MODAL ── -->
+<div id="tweet-modal" onclick="if(event.target===this)closeTweetModal()">
+  <div class="tw-box">
+    <h3 id="tw-title">Tweet angles</h3>
+    <div class="tw-source" id="tw-source"></div>
+    <div class="tw-tabs" id="tw-tabs"></div>
+    <textarea class="tw-draft-area" id="tw-draft" oninput="twCharCount()" rows="5"></textarea>
+    <div class="tw-char" id="tw-char">0 / 280</div>
+    <div class="tw-actions">
+      <button class="tw-copy-btn" onclick="twCopy()">Copy</button>
+      <button class="tw-open-btn" onclick="twOpenX()">Post on X ↗</button>
+      <button class="tw-regen" onclick="twRegen()">↻ Remix</button>
+      <button class="tw-close-btn" onclick="closeTweetModal()">Close</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── LAUNCH MODAL ── -->
@@ -1774,6 +1813,7 @@ function pulseItemHtml(i,q){
   var starBtn='<button class="star-btn'+(isStarred?' starred':'')+'" id="starbtn-'+iid+'" onclick="icStar(this,\''+iid+'\')" title="Star this">'+(isStarred?'★':'☆')+'</button>';
   var saveBtn='<button class="save-btn'+(isSaved?' saved':'')+'" id="sbtn-'+iid+'" onclick="icSave(this,\''+iid+'\')">'+(isSaved?'🔖 Saved':'🔖 Save')+'</button>';
   var noteBtn='<button class="note-btn'+(hasNote?' has-note':'')+'" id="note-btn-'+nid+'" onclick="icNote(\''+nid+'\',\''+iid+'\')">'+(hasNote?'📝':'✎')+'</button>';
+  var tweetBtn='<button class="tweet-draft-btn" onclick="icTweet(\''+iid+'\')" title="Draft tweet angles">🐦 Tweet</button>';
 
   var titleHtml=q?highlightMatch(i.title,q):escHtml(i.title);
   if(_pwbWords.length&&watchHit)titleHtml=highlightWatchWords(q?titleHtml:i.title);
@@ -1785,7 +1825,7 @@ function pulseItemHtml(i,q){
   var classes='pulse-item'+(viral?' viral':'')+(watchHit?' watch-hit':'')+(seen?' seen-item':'');
   var urlSafe=escHtml(i.url||'');
   var openLink='href="'+urlSafe+'" target="_blank" rel="noopener" onclick="markSeen(\''+iid+'\')"';
-  return '<div class="'+classes+'" data-platform="'+escHtml(i.platform||'')+'">'+pulseBadge(i.platform)+'<div class="pulse-item-body"><div class="pulse-item-title"><a '+openLink+'>'+titleHtml+'</a>'+viralTag+multiTag+velTag+'</div><div class="pulse-item-meta">'+metaHtml+'&nbsp;·&nbsp;'+ago+'</div>'+notePrev+noteWrap+'<div class="pulse-item-actions">'+launchBtn+starBtn+saveBtn+noteBtn+'</div></div></div>';
+  return '<div class="'+classes+'" data-platform="'+escHtml(i.platform||'')+'">'+pulseBadge(i.platform)+'<div class="pulse-item-body"><div class="pulse-item-title"><a '+openLink+'>'+titleHtml+'</a>'+viralTag+multiTag+velTag+'</div><div class="pulse-item-meta">'+metaHtml+'&nbsp;·&nbsp;'+ago+'</div>'+notePrev+noteWrap+'<div class="pulse-item-actions">'+launchBtn+starBtn+saveBtn+noteBtn+tweetBtn+'</div></div></div>';
 }
 
 /* ── Cache-based action handlers (no escaping issues) ── */
@@ -1794,6 +1834,7 @@ function icStar(btn,iid){var i=icGet(iid);if(i)starToggle(btn,i.title,i.meta,i.u
 function icSave(btn,iid){var i=icGet(iid);if(i)savedToggle(btn,i.title,i.meta,i.url,i.platform);}
 function icNote(nid,iid){var i=icGet(iid);if(i)toggleNote(nid,i.url,i.title);}
 function icSubmitNote(nid,iid){var i=icGet(iid);if(i)submitNote(nid,i.url,i.title);}
+function icTweet(iid){var i=icGet(iid);if(i)openTweetModal(i.title,i.meta,i.url,i.platform);}
 // markSeen by iid — look up url from cache
 var _origMarkSeen=markSeen;
 markSeen=function(key){
@@ -1855,8 +1896,180 @@ function openLaunchModal(title,meta,url,platform){
 function closeLaunchModal(){
   document.getElementById('launch-modal').classList.remove('open');
 }
-document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLaunchModal();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeLaunchModal();closeTweetModal();}});
 document.getElementById('launch-modal').addEventListener('click',function(e){if(e.target===this)closeLaunchModal();});
+
+/* ══════════════════════════════════════════════════════════
+   TWEET INTELLIGENCE ENGINE
+   ══════════════════════════════════════════════════════════ */
+var _twItem={title:'',meta:'',url:'',platform:''};
+var _twAngles=[];
+var _twIdx=0;
+
+function openTweetModal(title,meta,url,platform){
+  _twItem={title:title,meta:meta,url:url,platform:platform};
+  _twAngles=generateTweetAngles(title,meta,url,platform);
+  _twIdx=0;
+  var titleEl=document.getElementById('tw-title');
+  var srcEl=document.getElementById('tw-source');
+  if(titleEl)titleEl.textContent=title.slice(0,60)+(title.length>60?'…':'');
+  if(srcEl)srcEl.textContent=platform+(url?' · '+url.replace(/^https?:\/\//,'').slice(0,50):'');
+  renderTwTabs();
+  setTwDraft(0);
+  document.getElementById('tweet-modal').classList.add('open');
+}
+function closeTweetModal(){
+  var m=document.getElementById('tweet-modal');
+  if(m)m.classList.remove('open');
+}
+function renderTwTabs(){
+  var tabs=document.getElementById('tw-tabs');
+  if(!tabs)return;
+  tabs.innerHTML=_twAngles.map(function(a,i){
+    return '<button class="tw-tab'+(i===_twIdx?' active':'')+'" onclick="setTwDraft('+i+')">'+escHtml(a.label)+'</button>';
+  }).join('');
+}
+function setTwDraft(idx){
+  _twIdx=idx;
+  renderTwTabs();
+  var draft=document.getElementById('tw-draft');
+  if(draft&&_twAngles[idx]){draft.value=_twAngles[idx].text;twCharCount();}
+}
+function twCharCount(){
+  var draft=document.getElementById('tw-draft');
+  var counter=document.getElementById('tw-char');
+  if(!draft||!counter)return;
+  var len=draft.value.length;
+  counter.textContent=len+' / 280';
+  counter.classList.toggle('over',len>280);
+}
+function twCopy(){
+  var draft=document.getElementById('tw-draft');
+  if(!draft)return;
+  navigator.clipboard.writeText(draft.value).then(function(){
+    var btn=document.querySelector('.tw-copy-btn');
+    if(btn){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy';},1500);}
+  }).catch(function(){});
+}
+function twOpenX(){
+  var draft=document.getElementById('tw-draft');
+  if(!draft)return;
+  window.open('https://x.com/intent/tweet?text='+encodeURIComponent(draft.value),'_blank','noopener');
+}
+function twRegen(){
+  // Shuffle the current angle's text variant
+  _twAngles=generateTweetAngles(_twItem.title,_twItem.meta,_twItem.url,_twItem.platform);
+  setTwDraft(_twIdx<_twAngles.length?_twIdx:0);
+}
+
+/* ── Tweet angle generator ── */
+function generateTweetAngles(title,meta,url,platform){
+  var t=title||'';var m=meta||'';var u=url||'';var p=platform||'';
+  var isHN=p==='Hacker News';
+  var isReddit=p==='Reddit';
+  var isDev=p==='Dev.to';
+  var isGoogle=p==='Google Trends';
+  var isTrends=isGoogle||p==='X Trends';
+  var isX=p.toLowerCase().includes('x ');
+
+  // Detect story type from keywords
+  var low=(t+' '+m).toLowerCase();
+  var isAnimal=/(dog|cat|bear|wolf|animal|whale|bird|snake|fox|lion|tiger|horse|rabbit|deer|seal|otter)/i.test(t+m);
+  var isSurvival=/(surviv|rescue|found alive|miss|lost|avalanche|flood|wildfire|storm|trapped)/i.test(t+m);
+  var isAI=/(ai|llm|gpt|claude|grok|openai|anthropic|model|agent|neural|machine learn)/i.test(t+m);
+  var isCrypto=/(coin|token|memecoin|pump|solana|sol|btc|eth|defi|nft|blockchain|wallet|dex)/i.test(t+m);
+  var isHack=/(hack|breach|leak|exploit|vulnerab|ransom|attack|ddos)/i.test(t+m);
+  var isViral=/(viral|meme|trending|everyone|people are|going crazy|insane|wild)/i.test(t+m);
+  var isNarrative=/(narrative|cycle|season|meta|thesis|play)/i.test(t+m);
+  var isTech=/(built|launched|release|open source|github|api|sdk|framework|tool)/i.test(t+m);
+
+  // Clean title for tweets
+  var clean=t.replace(/\s+/g,' ').trim();
+  // Coin ticker guess
+  var ticker=guessTicker(t);
+  var angles=[];
+
+  /* ── ANGLE 1: Early spotter / narrator (CT staple) ── */
+  if(isAnimal&&isSurvival){
+    angles.push({label:'Narrator',text:'JUST FOUND AN INSANE ANIMAL NARRA EARLY\n\n'+clean+'\n\ntons of outlets are only just beginning to pick the story up\n\nmass media coverage incoming\n\n'+(ticker?'$'+ticker+' is the play':'watch this space')});
+  } else if(isAI){
+    angles.push({label:'AI Alpha',text:'something buried in the docs that nobody is talking about\n\n'+clean+'\n\nthe implications here are massive and people are sleeping on it\n\n'+(url?url.replace(/^https?:\/\//,'').slice(0,50):'')});
+  } else if(isCrypto){
+    angles.push({label:'Crypto Alpha',text:clean+'\n\n'+(ticker?'$'+ticker+' ':'')+'this is the play right now\n\nearly people getting positioned\n\ndo with this what you will'});
+  } else {
+    angles.push({label:'Early Spotter',text:'something is starting to get very loud\n\n'+clean+'\n\noutlets beginning to pick it up\n\n'+(ticker?'$'+ticker+' narrative incoming':'watch closely')});
+  }
+
+  /* ── ANGLE 2: Reply bait / engagement hook ── */
+  var hookLines=twHookLines(t,m);
+  angles.push({label:'Reply Bait',text:hookLines});
+
+  /* ── ANGLE 3: Coin launch angle ── */
+  if(ticker){
+    angles.push({label:'Coin Angle',text:'this deserves to be ran correctly\n\nsomeone tried this and got rugged\n\nthe story is real, the narrative is real\n\n$'+ticker+' is the ticker\n\n'+(u?u.replace(/^https?:\/\//,'').slice(0,40)+'\n\n':'')+'not financial advice run it yourself'});
+  } else {
+    angles.push({label:'Narrative',text:twNarrativeAngle(t,m,p)});
+  }
+
+  /* ── ANGLE 4: CT-style alpha drop ── */
+  angles.push({label:'Alpha Drop',text:twAlphaDrop(t,m,p,ticker)});
+
+  /* ── ANGLE 5: Thread starter ── */
+  angles.push({label:'Thread (1/)',text:twThread(t,m,p,ticker)});
+
+  return angles;
+}
+
+function guessTicker(title){
+  // Look for $TICKER pattern first
+  var m=title.match(/\$([A-Z]{2,8})/);
+  if(m)return m[1];
+  // Extract a clean word from the title (2-6 chars, no stop words)
+  var stop={'THE':1,'AND':1,'FOR':1,'WITH':1,'ARE':1,'WAS':1,'THAT':1,'THIS':1,'HAVE':1,'FROM':1,'THEY':1,'WILL':1,'BEEN':1,'THEIR':1,'SAID':1,'WHAT':1,'WHEN':1,'WERE':1,'MORE':1,'ALSO':1,'INTO':1,'THAN':1,'TIME':1,'YEAR':1,'YOUR':1,'ABOUT':1,'AFTER':1,'JUST':1,'NEW':1,'HOW':1};
+  var words=title.toUpperCase().replace(/[^A-Z ]/g,'').split(' ');
+  for(var i=0;i<words.length;i++){
+    var w=words[i];
+    if(w.length>=3&&w.length<=7&&!stop[w])return w;
+  }
+  return null;
+}
+
+function twHookLines(title,meta){
+  var low=(title+' '+meta).toLowerCase();
+  if(/(why|how|what|when|who)/i.test(title)){
+    return title+'\n\nlet me know what you think in the replies\n\nthis changes everything or is massively overblown?';
+  }
+  if(/(found|discover|built|made|created)/i.test(title)){
+    return 'genuinely did not expect this\n\n'+title+'\n\nwhat is your take on this';
+  }
+  return 'real question:\n\n'+title.toLowerCase()+'\n\nbullish or bearish?\n\ndrop it below 👇';
+}
+
+function twNarrativeAngle(title,meta,platform){
+  var source=platform?'from '+platform:'online';
+  return 'new narrative forming '+source+'\n\n'+title+'\n\nthis is early\n\npeople who understand what this means are going to be very well positioned\n\nthread incoming';
+}
+
+function twAlphaDrop(title,meta,platform,ticker){
+  var pfx=ticker?'$'+ticker+' alpha:\n\n':'alpha drop:\n\n';
+  return pfx+title+'\n\n'+
+    (meta?meta.slice(0,100)+'\n\n':'')+
+    'why this matters more than people think:\n\n'+
+    '· first mover advantage\n'+
+    '· media cycle just starting\n'+
+    '· retail not here yet\n\n'+
+    'do your own research';
+}
+
+function twThread(title,meta,platform,ticker){
+  return (ticker?'$'+ticker+' ':'')+'thread:\n\n'+
+    '1/ '+title+'\n\n'+
+    '2/ here\'s why this is bigger than it looks:\n\n'+
+    '3/ what most people are missing:\n\n'+
+    (meta?meta.slice(0,120)+'\n\n':'')+
+    '4/ what I\'m watching for next\n\n'+
+    '— follow for more early signals like this';
+}
 
 function launchRegen(){launchGenerate();}
 
