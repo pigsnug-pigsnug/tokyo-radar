@@ -109,7 +109,14 @@ a{color:inherit}
   #pulse-panel{flex-direction:column}
   .pulse-feed-area{overflow-y:visible}
 }
-.pulse-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #1C1E26;align-items:flex-start;border-radius:6px;transition:background .2s}
+.pulse-item{display:flex;gap:14px;padding:14px 0 14px 12px;border-bottom:1px solid #1C1E26;align-items:flex-start;border-radius:6px;transition:background .2s;border-left:3px solid transparent;position:relative}
+.pulse-item[data-platform="Reddit"]{border-left-color:#FF4500}
+.pulse-item[data-platform="X Trends"]{border-left-color:#E8EAF0}
+.pulse-item[data-platform="TikTok"]{border-left-color:#EE1D52}
+.pulse-item[data-platform="Dev.to"]{border-left-color:#3D3D3F}
+.pulse-item[data-platform="Hacker News"]{border-left-color:#FF6600}
+.pulse-item[data-platform="Google Trends"]{border-left-color:#4285F4}
+.pulse-item[data-platform="Al Jazeera"]{border-left-color:#C8972A}
 .pulse-item-badge{flex-shrink:0;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;font-family:var(--mono);white-space:nowrap}
 .badge-reddit{background:#FF4500;color:#fff}
 .badge-hn{background:#FF6600;color:#fff}
@@ -119,9 +126,12 @@ a{color:inherit}
 .badge-tiktok{background:linear-gradient(135deg,#010101 0%,#69C9D0 50%,#EE1D52 100%);color:#fff}
 .badge-aljazeera{background:#C8972A;color:#fff}
 /* Viral green flash */
-.pulse-item.viral{background:rgba(0,230,80,.07);border-left:3px solid #00E650;padding-left:11px;animation:viralPulse 2.5s ease-in-out infinite}
-@keyframes viralPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,230,80,.0)}50%{box-shadow:0 0 12px 2px rgba(0,230,80,.18)}}
-.viral-badge{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:3px;background:#00E650;color:#000;font-size:9px;font-weight:800;font-family:var(--mono);letter-spacing:.5px;vertical-align:middle}
+.pulse-item.viral{background:rgba(0,230,80,.07);border-left-color:#00E650!important;animation:viralPulse 2.5s ease-in-out infinite}
+.pulse-item.viral .pulse-item-title a{font-size:16px;font-weight:700;color:#fff}
+.pulse-item.viral .pulse-item-badge{transform:scale(1.1)}
+@keyframes viralPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,230,80,.0)}50%{box-shadow:0 0 16px 3px rgba(0,230,80,.22)}}
+.viral-badge{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:3px;background:#00E650;color:#000;font-size:10px;font-weight:800;font-family:var(--mono);letter-spacing:.5px;vertical-align:middle;animation:viralBadgePulse 1.5s ease-in-out infinite}
+@keyframes viralBadgePulse{0%,100%{opacity:1}50%{opacity:.6}}
 .pulse-item-body{flex:1;min-width:0}
 .pulse-item-title{font-size:14px;font-weight:500;line-height:1.4;margin-bottom:4px;color:#E8EAF0}
 .pulse-item-title a{text-decoration:none;color:#E8EAF0}
@@ -230,13 +240,22 @@ a{color:inherit}
 /* live feed */
 .rdr-feed{max-height:280px;overflow:auto;font:12.5px/1.6 var(--mono);color:#A0A8B8}
 .rdr-feed div{border-bottom:1px dashed #1C1E26;padding:2px 0}
-/* hot words table */
+/* hot words table / heatmap */
 .rdr-table{width:100%;border-collapse:collapse;font-size:13px}
 .rdr-table th{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:#6B7280;text-align:left;padding:6px 8px;border-bottom:1px solid #1C1E26}
-.rdr-table td{padding:6px 8px;border-bottom:1px solid #1C1E26;color:#E8EAF0;overflow-wrap:anywhere}
+.rdr-table td{padding:5px 8px;border-bottom:1px solid #1C1E26;color:#E8EAF0;overflow-wrap:anywhere}
 .rdr-n{text-align:right!important;font-family:var(--mono)}
 .rdr-table tr.rdr-flash td{animation:rdrfl 1.2s ease-in-out 3}
 @keyframes rdrfl{0%,100%{background:transparent}50%{background:rgba(255,70,85,.15)}}
+/* heatmap cells */
+.rdr-heat-cell{display:inline-block;min-width:42px;text-align:right;padding:3px 6px;border-radius:4px;font-family:var(--mono);font-weight:600;font-size:13px;transition:background .4s,color .4s}
+/* coin alert */
+.rdr-alert-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.rdr-alert-active{border:1px solid #00E676!important}
+#radar-alert-log{max-height:160px;overflow:auto;font:12px/1.6 var(--mono);color:#A0A8B8;margin-top:6px}
+#radar-alert-log div{padding:2px 0;border-bottom:1px dashed #1C1E26}
+.coin-alert-flash{animation:coinAlertFlash .6s ease-in-out 5}
+@keyframes coinAlertFlash{0%,100%{background:transparent}50%{background:rgba(0,230,118,.18)}}
 
 /* ════════════════════════════════════════════
    DESK TAB (Tinance layout)
@@ -333,6 +352,29 @@ html[data-theme="dark"]{
     --shadow:0 1px 0 rgba(0,0,0,.2),0 10px 26px rgba(0,0,0,.35);
   }
 }
+/* ── TOKYO NIGHT mode ── */
+html[data-theme="tokyonight"]{
+  --bg:#1a1b2e;--panel:#16213e;--paper:#0f3460;--ink:#a9b1d6;--muted:#565f89;
+  --line:#2a2b3d;--line2:#3d3f5c;
+  --brand:#ff007c;--brand-ink:#fff;--brand-text:#ff4da6;--brand-soft:rgba(255,0,124,.12);
+  --blue:#7aa2f7;--blue-soft:rgba(122,162,247,.13);
+  --good:#9ece6a;--good-t:#7fb347;--good-soft:rgba(158,206,106,.15);
+  --bad:#f7768e;--bad-t:#e05c72;--bad-soft:rgba(247,118,142,.13);
+  --warn:#e0af68;--warn-soft:rgba(224,175,104,.18);
+  --rail:#16213e;--rail-ink:#c0caf5;--rail-muted:#565f89;--rail-line:#2a2b3d;--rail-on:#1f2335;
+  --shadow:0 1px 0 rgba(0,0,0,.3),0 10px 26px rgba(0,0,0,.5);
+}
+html[data-theme="tokyonight"] #pulse-panel,
+html[data-theme="tokyonight"] #radar-panel,
+html[data-theme="tokyonight"] #history-panel,
+html[data-theme="tokyonight"] #saved-panel,
+html[data-theme="tokyonight"] #bin-panel{background:#1a1b2e}
+html[data-theme="tokyonight"] .pulse-sidebar{background:#16213e;border-right-color:#2a2b3d}
+html[data-theme="tokyonight"] .pulse-item{border-bottom-color:#2a2b3d}
+html[data-theme="tokyonight"] .pulse-box,
+html[data-theme="tokyonight"] .rdr-panel{background:#16213e;border-color:#2a2b3d}
+html[data-theme="tokyonight"] .psb-btn.active{background:rgba(255,0,124,.15);border-left-color:#ff007c}
+
 /* ── RED-BLACK-WHITE mode ── */
 html[data-theme="rbw"]{
   --bg:#0A0000;--panel:#120000;--paper:#1A0000;--ink:#FFFFFF;--muted:#CC4444;
@@ -341,6 +383,36 @@ html[data-theme="rbw"]{
   --rail:#050000;--rail-ink:#FFFFFF;--rail-muted:#AA3333;--rail-line:#1A0404;--rail-on:#2A0000;
   --shadow:0 1px 0 rgba(0,0,0,.3),0 10px 26px rgba(255,0,0,.08);
 }
+
+/* ── UNREAD DOT on tab ── */
+.tb-tab{position:relative}
+.tb-unread{position:absolute;top:10px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--brand);display:none;animation:unreadPop .3s ease}
+.tb-tab.has-unread .tb-unread{display:block}
+@keyframes unreadPop{0%{transform:scale(0)}100%{transform:scale(1)}}
+
+/* ── AUTO-REFRESH BANNER ── */
+#new-items-banner{display:none;position:sticky;top:var(--tab-h);z-index:50;background:rgba(209,15,34,.9);backdrop-filter:blur(6px);color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.5px;padding:7px 20px;cursor:pointer;text-align:center;transition:background .2s}
+#new-items-banner:hover{background:var(--brand)}
+#new-items-banner.show{display:block}
+
+/* ── COMMAND PALETTE ── */
+#cmd-palette{position:fixed;inset:0;z-index:9900;display:none;align-items:flex-start;justify-content:center;padding-top:120px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
+#cmd-palette.open{display:flex}
+#cmd-palette .cp-box{background:#0F1015;border:1px solid #2A2D38;border-radius:14px;width:min(580px,95vw);max-height:70vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.7)}
+#cmd-palette .cp-input-row{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #1C1E26}
+#cmd-palette .cp-icon{color:#6B7280;font-size:16px;flex-shrink:0}
+#cmd-palette .cp-input{border:none;background:transparent;outline:none;font-family:var(--body);font-size:15px;color:#E8EAF0;flex:1;min-width:0}
+#cmd-palette .cp-input::placeholder{color:#6B7280}
+#cmd-palette .cp-hint{font-family:var(--mono);font-size:10px;color:#6B7280;flex-shrink:0}
+#cmd-palette .cp-results{overflow-y:auto;padding:8px 0}
+#cmd-palette .cp-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;transition:background .1s}
+#cmd-palette .cp-item:hover,#cmd-palette .cp-item.selected{background:rgba(209,15,34,.12)}
+#cmd-palette .cp-item-icon{width:28px;height:28px;border-radius:6px;background:#1C1E26;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+#cmd-palette .cp-item-label{font-size:13px;color:#E8EAF0;font-weight:500;flex:1}
+#cmd-palette .cp-item-sub{font-size:11px;color:#6B7280;font-family:var(--mono)}
+#cmd-palette .cp-item-kbd{font-family:var(--mono);font-size:10px;color:#6B7280;background:#1C1E26;border-radius:4px;padding:2px 5px;flex-shrink:0}
+#cmd-palette .cp-section{padding:6px 16px 3px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6B7280;font-family:var(--mono)}
+#cmd-palette .cp-empty{padding:30px;text-align:center;color:#6B7280;font-family:var(--mono);font-size:13px}
 
 /* ── SEEN/DIMMED items ── */
 .pulse-item.seen-item{opacity:.45;transition:opacity .2s}
@@ -469,7 +541,7 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
 <div id="tab-bar">
   <div class="tb-brand">⬡ TOKYO</div>
   <div class="tb-tabs">
-    <button class="tb-tab active" onclick="switchTab('pulse')">Pulse</button>
+    <button class="tb-tab active" id="tab-pulse" onclick="switchTab('pulse')">Pulse<span class="tb-unread" id="pulse-unread-dot"></span></button>
     <button class="tb-tab" onclick="switchTab('radar')">Radar</button>
     <button class="tb-tab" onclick="switchTab('history')">Log</button>
     <button class="tb-tab" onclick="switchTab('desk')">Desk</button>
@@ -480,9 +552,25 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
     <button class="th-btn" id="th-system" onclick="setTheme('system')" title="System theme">⊙</button>
     <div class="th-sep"></div>
     <button class="th-btn" id="th-rbw" onclick="setTheme('rbw')" title="Red-Black-White mode" style="font-size:10px;letter-spacing:.5px;font-weight:700">RBW</button>
+    <button class="th-btn" id="th-tokyonight" onclick="setTheme('tokyonight')" title="Tokyo Night" style="font-size:10px;letter-spacing:.5px;font-weight:700;color:#ff007c">TN</button>
   </div>
   <div class="tb-clock" id="ist-clock">--:--:-- IST</div>
 </div>
+
+<!-- ── COMMAND PALETTE ── -->
+<div id="cmd-palette" onclick="if(event.target===this)closeCmdPalette()">
+  <div class="cp-box">
+    <div class="cp-input-row">
+      <span class="cp-icon">⌘</span>
+      <input class="cp-input" id="cp-input" placeholder="Search items, switch tabs, filter…" oninput="cpQuery(this.value)" onkeydown="cpKey(event)">
+      <span class="cp-hint">ESC to close</span>
+    </div>
+    <div class="cp-results" id="cp-results"></div>
+  </div>
+</div>
+
+<!-- ── AUTO-REFRESH BANNER ── -->
+<div id="new-items-banner" onclick="applyNewItems()"></div>
 
 <!-- ── SCROLL TO TOP ── -->
 <button id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">↑</button>
@@ -619,6 +707,20 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
       <div class="rdr-feed" id="radar-stream"><div style="color:#6B7280">Waiting for coins…</div></div>
     </section>
   </div>
+
+  <!-- Coin Alert section -->
+  <section class="rdr-panel" style="margin-top:14px">
+    <h2 class="rdr-h2">Coin alert <span class="rdr-chip" id="radar-alert-status" style="font-size:11px;color:#6B7280">Off</span></h2>
+    <div class="rdr-alert-row">
+      <input type="text" id="radar-alert-coin" placeholder="Coin name (e.g. SOL)" class="rdr-input" style="max-width:150px">
+      <input type="number" id="radar-alert-price" placeholder="Price ≥ (USD)" class="rdr-num" style="width:120px" min="0" step="any">
+      <input type="number" id="radar-alert-mentions" placeholder="Mentions ≥" class="rdr-num" style="width:100px" min="0" step="1">
+      <button class="rdr-btn rdr-primary" onclick="radarAlertSet()">Set alert</button>
+      <button class="rdr-btn" onclick="radarAlertClear()">Clear</button>
+    </div>
+    <div class="rdr-hint">Flash + notification when the coin's price or mention count hits your threshold.</div>
+    <div id="radar-alert-log"></div>
+  </section>
 
   <!-- Hot Words full-width table -->
   <section class="rdr-panel" style="margin-top:14px">
@@ -782,12 +884,96 @@ function pinCheck(){
   }
 }
 window.addEventListener('keydown',function(e){
-  if(!document.getElementById('pin-overlay').style.display || document.getElementById('pin-overlay').style.display!=='none'){
+  var pinEl=document.getElementById('pin-overlay');
+  var pinActive=pinEl&&pinEl.style.display!=='none';
+  if(pinActive){
     if(e.key>='0'&&e.key<='9')pinKey(e.key);
     else if(e.key==='Backspace')pinKey('back');
     else if(e.key==='Enter')pinKey('ok');
+    return;
   }
+  // Command palette toggle
+  var cpOpen=document.getElementById('cmd-palette').classList.contains('open');
+  if((e.key==='k'&&(e.metaKey||e.ctrlKey))||(e.key==='/'&&!isInputFocused())){
+    e.preventDefault();
+    if(cpOpen)closeCmdPalette();else openCmdPalette();
+    return;
+  }
+  if(e.key==='Escape'){if(cpOpen){closeCmdPalette();return;}}
+  // Global keyboard shortcuts (only when no input focused)
+  if(isInputFocused()||cpOpen)return;
+  if(e.key==='p'||e.key==='P')switchTab('pulse');
+  else if(e.key==='r'||e.key==='R')switchTab('radar');
+  else if(e.key==='l'||e.key==='L')switchTab('history');
+  else if(e.key==='d'||e.key==='D')switchTab('desk');
 });
+function isInputFocused(){var t=document.activeElement;return t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable);}
+
+/* ══════════════════════════════════════════════════════════
+   COMMAND PALETTE
+   ══════════════════════════════════════════════════════════ */
+var _cpSelected=0;
+function openCmdPalette(){
+  document.getElementById('cmd-palette').classList.add('open');
+  var inp=document.getElementById('cp-input');
+  inp.value='';
+  cpQuery('');
+  setTimeout(function(){inp.focus();},50);
+}
+function closeCmdPalette(){
+  document.getElementById('cmd-palette').classList.remove('open');
+}
+function cpQuery(q){
+  q=(q||'').toLowerCase().trim();
+  var html='';
+  // Nav commands
+  var navCmds=[
+    {icon:'⚡',label:'Pulse',sub:'Switch to Pulse feed',action:"switchTab('pulse');closeCmdPalette()",kbd:'P'},
+    {icon:'📡',label:'Radar',sub:'Switch to Radar',action:"switchTab('radar');closeCmdPalette()",kbd:'R'},
+    {icon:'📋',label:'Log',sub:'Launch history',action:"switchTab('history');closeCmdPalette()",kbd:'L'},
+    {icon:'🖥',label:'Desk',sub:'Desk tools',action:"switchTab('desk');closeCmdPalette()",kbd:'D'},
+    {icon:'🔖',label:'Saved',sub:'View saved items',action:"setSideFilter('__saved',null);switchTab('pulse');closeCmdPalette()",kbd:''},
+    {icon:'★',label:'Stars',sub:'View starred items',action:"setSideFilter('__starred',null);switchTab('pulse');closeCmdPalette()",kbd:''},
+    {icon:'✎',label:'Notes',sub:'View notes',action:"setSideFilter('__notes',null);switchTab('pulse');closeCmdPalette()",kbd:''},
+  ];
+  var filteredNav=q?navCmds.filter(function(c){return c.label.toLowerCase().includes(q)||c.sub.toLowerCase().includes(q);}):navCmds;
+  if(filteredNav.length){
+    html+='<div class="cp-section">Navigation</div>';
+    filteredNav.forEach(function(c,idx){
+      html+='<div class="cp-item'+(idx===0&&!q?' selected':'')+'" onclick="'+c.action+'" data-idx="'+idx+'">'
+        +'<div class="cp-item-icon">'+c.icon+'</div>'
+        +'<div class="cp-item-label">'+c.label+'</div>'
+        +'<div class="cp-item-sub">'+c.sub+'</div>'
+        +(c.kbd?'<div class="cp-item-kbd">'+c.kbd+'</div>':'')
+        +'</div>';
+    });
+  }
+  // Search pulse items
+  if(q&&q.length>1){
+    var items=(pulseData.all_items||[]).filter(function(i){return(i.title||'').toLowerCase().includes(q);}).slice(0,6);
+    if(items.length){
+      html+='<div class="cp-section">Pulse Feed</div>';
+      items.forEach(function(i){
+        var urlSafe=i.url?i.url.replace(/"/g,'%22'):'#';
+        html+='<div class="cp-item" onclick="window.open(\''+urlSafe+'\',\'_blank\');closeCmdPalette()">'
+          +'<div class="cp-item-icon" style="font-size:9px">'+escHtml(i.platform||'').slice(0,3)+'</div>'
+          +'<div class="cp-item-label">'+escHtml(i.title.slice(0,60))+'</div>'
+          +'<div class="cp-item-sub">'+escHtml(i.platform||'')+'</div>'
+          +'</div>';
+      });
+    }
+  }
+  if(!html)html='<div class="cp-empty">No results — type to search</div>';
+  document.getElementById('cp-results').innerHTML=html;
+  _cpSelected=0;
+}
+function cpKey(e){
+  var items=document.querySelectorAll('#cp-results .cp-item');
+  if(e.key==='ArrowDown'){e.preventDefault();_cpSelected=Math.min(_cpSelected+1,items.length-1);}
+  else if(e.key==='ArrowUp'){e.preventDefault();_cpSelected=Math.max(_cpSelected-1,0);}
+  else if(e.key==='Enter'){if(items[_cpSelected])items[_cpSelected].click();return;}
+  items.forEach(function(el,i){el.classList.toggle('selected',i===_cpSelected);});
+}
 
 /* ══════════════════════════════════════════════════════════
    TAB SWITCHER
@@ -811,6 +997,14 @@ function switchTab(t){
   if(t==='history')historyRender();
   if(t==='multi')multiRender();
   if(t==='bin')binRender();
+  if(t==='pulse'){
+    // Clear unread dot and apply pending items when user comes back to Pulse
+    var dot=document.getElementById('tab-pulse');
+    if(dot)dot.classList.remove('has-unread');
+    if(_pendingItems){
+      showNewItemsBanner(_pendingItems.newCount);
+    }
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1310,8 +1504,10 @@ function isViral(item){
 
 /* X Trends fetched server-side via /api/trends — no client fetch needed */
 
+var _pendingItems=null; // new items waiting for user to apply
 function pulseFetch(){
   var el=document.getElementById('pulse-status');
+  var isFirst=pulseData.all_items.length===0;
   if(el)el.textContent='Refreshing…';
   Promise.all([
     fetch('/api/trends').then(function(r){return r.json()}).catch(function(){return{all_items:[],now_items:[],updated_at:0}})
@@ -1320,34 +1516,81 @@ function pulseFetch(){
     var clientNow=Date.now();
     var combined=[].concat(server.all_items||[]);
     var seen=new Map();
-    // Stamp clientSeenAt = now on every item so time filters work reliably
     combined.forEach(function(i){
       i.clientSeenAt=clientNow;
       var k=(i.platform+'::'+i.title).toLowerCase();
       if(!seen.has(k))seen.set(k,i);
     });
-    // Sort: viral items first, then by recency
     var all=Array.from(seen.values()).sort(function(a,b){
       var av=isViral(a)?1:0,bv=isViral(b)?1:0;
       if(bv!==av)return bv-av;
       return b.seenAt-a.seenAt;
     });
-    pulseData={all_items:all,updated_at:clientNow};
     var viral=all.filter(isViral).length;
-    _multiMap=buildMultiSignalMap(all);
-    multiUpdateCount();
-    var hits=pwbHits(all);
-    var hitsEl=document.getElementById('pwb-hits');
-    if(hitsEl){if(hits&&_pwbWords.length){hitsEl.textContent=hits+' match'+(hits===1?'':'es');hitsEl.style.display='';}else{hitsEl.style.display='none';}}
-    if(el)el.textContent='Updated just now · '+all.length+' items'+(viral?' · 🔥 '+viral+' viral':'');
-    pulsePage=0;
-    pulseRender();
-    starredUpdateCount();
-    notesUpdateCount();
-    maybeShowMorningDigest(all);
+    if(isFirst){
+      // First load — apply immediately
+      pulseData={all_items:all,updated_at:clientNow};
+      _multiMap=buildMultiSignalMap(all);
+      multiUpdateCount();
+      var hits=pwbHits(all);
+      var hitsEl=document.getElementById('pwb-hits');
+      if(hitsEl){if(hits&&_pwbWords.length){hitsEl.textContent=hits+' match'+(hits===1?'':'es');hitsEl.style.display='';}else{hitsEl.style.display='none';}}
+      if(el)el.textContent='Updated just now · '+all.length+' items'+(viral?' · 🔥 '+viral+' viral':'');
+      pulsePage=0;
+      pulseRender();
+      starredUpdateCount();
+      notesUpdateCount();
+      updateSidebarCounts();
+      maybeShowMorningDigest(all);
+    } else {
+      // Background refresh — find new items
+      var existingKeys=new Set(pulseData.all_items.map(function(i){return(i.platform+'::'+i.title).toLowerCase();}));
+      var newItems=all.filter(function(i){return!existingKeys.has((i.platform+'::'+i.title).toLowerCase());});
+      if(newItems.length>0){
+        _pendingItems={all:all,clientNow:clientNow,viral:viral,newCount:newItems.length};
+        // Show unread dot if not on Pulse tab
+        if(_activeTab!=='pulse'){
+          var tab=document.getElementById('tab-pulse');
+          if(tab)tab.classList.add('has-unread');
+        } else {
+          // On Pulse tab — show the banner instead
+          showNewItemsBanner(newItems.length);
+        }
+        if(el)el.textContent=''+newItems.length+' new items ready';
+      } else {
+        if(el)el.textContent='Updated just now · '+all.length+' items'+(viral?' · 🔥 '+viral+' viral':'');
+      }
+    }
   }).catch(function(){
     if(el)el.textContent='Fetch error — retrying';
   });
+}
+function showNewItemsBanner(count){
+  var b=document.getElementById('new-items-banner');
+  if(!b)return;
+  b.textContent='↑ '+count+' new item'+(count===1?'':' s')+' — click to load';
+  b.textContent='↑ '+count+' new item'+(count===1?'':'s')+' — tap to load';
+  b.classList.add('show');
+}
+function applyNewItems(){
+  if(!_pendingItems)return;
+  var d=_pendingItems;
+  _pendingItems=null;
+  pulseData={all_items:d.all,updated_at:d.clientNow};
+  _multiMap=buildMultiSignalMap(d.all);
+  multiUpdateCount();
+  var el=document.getElementById('pulse-status');
+  if(el)el.textContent='Updated just now · '+d.all.length+' items'+(d.viral?' · 🔥 '+d.viral+' viral':'');
+  var banner=document.getElementById('new-items-banner');
+  if(banner)banner.classList.remove('show');
+  var tab=document.getElementById('tab-pulse');
+  if(tab)tab.classList.remove('has-unread');
+  pulsePage=0;
+  pulseRender();
+  starredUpdateCount();
+  notesUpdateCount();
+  updateSidebarCounts();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function pulseLoadMore(){
@@ -1542,7 +1785,7 @@ function pulseItemHtml(i,q){
   var classes='pulse-item'+(viral?' viral':'')+(watchHit?' watch-hit':'')+(seen?' seen-item':'');
   var urlSafe=escHtml(i.url||'');
   var openLink='href="'+urlSafe+'" target="_blank" rel="noopener" onclick="markSeen(\''+iid+'\')"';
-  return '<div class="'+classes+'">'+pulseBadge(i.platform)+'<div class="pulse-item-body"><div class="pulse-item-title"><a '+openLink+'>'+titleHtml+'</a>'+viralTag+multiTag+velTag+'</div><div class="pulse-item-meta">'+metaHtml+'&nbsp;·&nbsp;'+ago+'</div>'+notePrev+noteWrap+'<div class="pulse-item-actions">'+launchBtn+starBtn+saveBtn+noteBtn+'</div></div></div>';
+  return '<div class="'+classes+'" data-platform="'+escHtml(i.platform||'')+'">'+pulseBadge(i.platform)+'<div class="pulse-item-body"><div class="pulse-item-title"><a '+openLink+'>'+titleHtml+'</a>'+viralTag+multiTag+velTag+'</div><div class="pulse-item-meta">'+metaHtml+'&nbsp;·&nbsp;'+ago+'</div>'+notePrev+noteWrap+'<div class="pulse-item-actions">'+launchBtn+starBtn+saveBtn+noteBtn+'</div></div></div>';
 }
 
 /* ── Cache-based action handlers (no escaping issues) ── */
@@ -1941,7 +2184,7 @@ function radarInit(){
   rdrConnect();
   radarFetchSol();
   setInterval(radarFetchSol,30000);
-  setInterval(radarRender,5000);
+  setInterval(function(){radarRender();checkCoinAlert(rdrEvents);},5000);
   radarRender();
   renderWatchList();
 }
@@ -1994,15 +2237,30 @@ function radarRender(){
     .sort(function(a,b){return(b.c30-a.c30)||(b.c120-a.c120)}).slice(0,40);
   var tbody=document.getElementById('radar-rows');
   if(!tbody)return;
+  // heatmap: find max values for scaling
+  var max30=Math.max(1,Math.max.apply(null,show.map(function(x){return x.c30})));
+  var max120=Math.max(1,Math.max.apply(null,show.map(function(x){return x.c120})));
+  var max360=Math.max(1,Math.max.apply(null,show.map(function(x){return x.c360})));
+  function heatCell(val,maxVal){
+    var ratio=val/maxVal;
+    var r,g,b,txt;
+    if(ratio<=0){r=28;g=30;b=40;txt='#4B5563';}
+    else if(ratio<0.25){r=28;g=60;b=40;txt='#6EE7A0';}
+    else if(ratio<0.5){r=20;g=80;b=50;txt='#34D399';}
+    else if(ratio<0.75){r=10;g=120;b=40;txt='#10B981';}
+    else{r=0;g=180;b=80;txt='#fff';}
+    return '<span class="rdr-heat-cell" style="background:rgb('+r+','+g+','+b+');color:'+txt+'">'+val+'</span>';
+  }
   tbody.innerHTML=show.length?show.map(function(x){
     var isW=rdrWatch.indexOf(x.word)>-1;
     var fl=isW&&x.c30>(_rdrLastC30[x.word]||0);
+    var speedColor=x.speed>=5?'#FF6B6B':x.speed>=3?'#00E676':'#6B7280';
     return '<tr'+(fl?' class="rdr-flash"':'')+'>'+
       '<td><b>'+escHtml(x.word)+'</b>'+(isW?' <span class="rdr-chip" style="padding:1px 7px;font-size:11px">watching</span>':'')+'</td>'+
-      '<td class="rdr-n">'+x.c30+'</td>'+
-      '<td class="rdr-n">'+x.c120+'</td>'+
-      '<td class="rdr-n">'+x.c360+'</td>'+
-      '<td class="rdr-n" style="color:'+(x.speed>=3?'#00E676':'#6B7280')+'">'+(x.speed?x.speed.toFixed(1)+'x':'-')+'</td>'+
+      '<td class="rdr-n">'+heatCell(x.c30,max30)+'</td>'+
+      '<td class="rdr-n">'+heatCell(x.c120,max120)+'</td>'+
+      '<td class="rdr-n">'+heatCell(x.c360,max360)+'</td>'+
+      '<td class="rdr-n" style="color:'+speedColor+';font-weight:'+(x.speed>=3?700:400)+'">'+(x.speed?x.speed.toFixed(1)+'×':'-')+'</td>'+
     '</tr>';
   }).join(''):'<tr><td colspan="5" style="color:#6B7280;font-family:var(--mono);font-size:12px;padding:12px 8px">Words show up here after a few minutes of listening.</td></tr>';
   show.forEach(function(x){_rdrLastC30[x.word]=x.c30});
@@ -2025,6 +2283,111 @@ document.addEventListener('click',function(e){
   var b=e.target.closest('[data-rdrm]');
   if(b){rdrToggleWatch(b.dataset.rdrm);}
 });
+
+/* ── COIN ALERT ── */
+var _coinAlert=null; // {coin, price, mentions}
+var _coinAlertFired=false;
+(function(){try{var s=localStorage.getItem('tr_coin_alert');if(s)_coinAlert=JSON.parse(s);}catch(e){}})();
+(function(){
+  if(!_coinAlert)return;
+  var ci=document.getElementById('radar-alert-coin');
+  var pi=document.getElementById('radar-alert-price');
+  var mi=document.getElementById('radar-alert-mentions');
+  if(ci&&_coinAlert.coin)ci.value=_coinAlert.coin;
+  if(pi&&_coinAlert.price)pi.value=_coinAlert.price;
+  if(mi&&_coinAlert.mentions)mi.value=_coinAlert.mentions;
+  updateAlertStatus();
+})();
+function radarAlertSet(){
+  var coin=(document.getElementById('radar-alert-coin')||{}).value||'';
+  var price=parseFloat((document.getElementById('radar-alert-price')||{}).value)||0;
+  var mentions=parseInt((document.getElementById('radar-alert-mentions')||{}).value)||0;
+  if(!coin.trim()&&!price&&!mentions){alert('Enter a coin name, price or mention threshold.');return;}
+  _coinAlert={coin:coin.trim().toLowerCase(),price:price,mentions:mentions};
+  _coinAlertFired=false;
+  try{localStorage.setItem('tr_coin_alert',JSON.stringify(_coinAlert));}catch(e){}
+  updateAlertStatus();
+  logCoinAlert('Alert set: '+(coin||'any coin')+(price?' price≥$'+price:'')+(mentions?' mentions≥'+mentions:''));
+}
+function radarAlertClear(){
+  _coinAlert=null;_coinAlertFired=false;
+  try{localStorage.removeItem('tr_coin_alert');}catch(e){}
+  updateAlertStatus();
+  var log=document.getElementById('radar-alert-log');
+  if(log)log.innerHTML='';
+}
+function updateAlertStatus(){
+  var el=document.getElementById('radar-alert-status');
+  if(!el)return;
+  if(!_coinAlert){el.textContent='Off';el.style.color='#6B7280';el.style.background='';}
+  else{
+    var parts=[];
+    if(_coinAlert.coin)parts.push(_coinAlert.coin.toUpperCase());
+    if(_coinAlert.price)parts.push('≥$'+_coinAlert.price);
+    if(_coinAlert.mentions)parts.push('≥'+_coinAlert.mentions+' mentions');
+    el.textContent='Active: '+parts.join(' · ');
+    el.style.color='#00E676';
+    el.style.background='rgba(0,230,118,.08)';
+  }
+}
+function logCoinAlert(msg){
+  var log=document.getElementById('radar-alert-log');
+  if(!log)return;
+  var t=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var d=document.createElement('div');
+  d.textContent='['+t+'] '+msg;
+  log.insertBefore(d,log.firstChild);
+}
+function checkCoinAlert(events){
+  if(!_coinAlert)return;
+  var coin=_coinAlert.coin;
+  // Count mentions
+  var mentionCount=0;
+  if(coin){
+    events.forEach(function(e){
+      var n=(e.name||e.baseToken&&e.baseToken.name||'').toLowerCase();
+      var sym=(e.symbol||e.baseToken&&e.baseToken.symbol||'').toLowerCase();
+      if(n.includes(coin)||sym.includes(coin))mentionCount++;
+    });
+  }
+  // Check price from radar-sol (SOL price) or a matching coin in the stream
+  var triggered=false;
+  var triggerMsg='';
+  if(_coinAlert.mentions&&mentionCount>=_coinAlert.mentions){
+    triggered=true;
+    triggerMsg=coin.toUpperCase()+' hit '+mentionCount+' mentions';
+  }
+  if(_coinAlert.price){
+    // Check the current SOL price shown on page
+    var solPriceEl=document.getElementById('radar-sol');
+    if(solPriceEl){
+      var priceStr=solPriceEl.textContent.replace(/[^0-9.]/g,'');
+      var curPrice=parseFloat(priceStr);
+      if(!isNaN(curPrice)&&(!coin||coin==='sol')&&curPrice>=_coinAlert.price){
+        triggered=true;
+        triggerMsg='SOL price $'+curPrice.toFixed(2)+' ≥ alert $'+_coinAlert.price;
+      }
+    }
+  }
+  if(triggered&&!_coinAlertFired){
+    _coinAlertFired=true;
+    logCoinAlert('🚨 ALERT: '+triggerMsg);
+    // Flash the page
+    var panel=document.getElementById('radar-panel');
+    if(panel)panel.classList.add('coin-alert-flash');
+    setTimeout(function(){if(panel)panel.classList.remove('coin-alert-flash');},3000);
+    // Browser notification
+    if(Notification&&Notification.permission==='granted'){
+      new Notification('Radar Alert 🚨',{body:triggerMsg,icon:'/favicon.ico'});
+    } else if(Notification&&Notification.permission!=='denied'){
+      Notification.requestPermission().then(function(p){
+        if(p==='granted')new Notification('Radar Alert 🚨',{body:triggerMsg,icon:'/favicon.ico'});
+      });
+    }
+    // Auto-reset fired after 5 min so it can retrigger
+    setTimeout(function(){_coinAlertFired=false;},300000);
+  }
+}
 function radarAddWatch(){
   var inp=document.getElementById('radar-watch-q');
   if(!inp)return;
