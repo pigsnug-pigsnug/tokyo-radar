@@ -266,11 +266,41 @@ async function fetchTikTok() {
   return [];
 }
 
+async function fetchAlJazeera() {
+  const now = Date.now();
+  const feeds = [
+    { url: 'https://www.aljazeera.com/xml/rss/all.xml', label: 'AJ World' },
+    { url: 'https://www.aljazeera.com/xml/rss/newsheadlines.xml', label: 'AJ Headlines' },
+  ];
+  for (const feed of feeds) {
+    try {
+      const res = await fetch(feed.url, {
+        headers: { 'User-Agent': CHROME_UA, 'Accept': 'text/xml,application/xml,*/*' },
+        redirect: 'follow', signal: AbortSignal.timeout(8000)
+      });
+      if (!res.ok) { console.error(`Al Jazeera ${feed.url} => ${res.status}`); continue; }
+      const xml = await res.text();
+      const rawItems = parseXmlItems(xml, 'item');
+      if (!rawItems.length) continue;
+      const items = rawItems.slice(0, 20).map(item => {
+        const title = getTag(item, 'title');
+        const link = getTag(item, 'link');
+        const pubDate = getTag(item, 'pubDate');
+        const seenAt = pubDate ? new Date(pubDate).getTime() : now;
+        if (!title) return null;
+        return { platform: 'Al Jazeera', title, meta: feed.label, url: link || 'https://www.aljazeera.com', tags: ['news','aljazeera'], score: 0, seenAt: isNaN(seenAt) ? now : seenAt, lastSeen: now };
+      }).filter(i => i && i.title && Date.now() - i.seenAt <= H48);
+      if (items.length) { console.log(`Al Jazeera OK via ${feed.url}: ${items.length} items`); return items; }
+    } catch(e) { console.error(`Al Jazeera ${feed.url} error:`, e.message); }
+  }
+  return [];
+}
+
 async function fetchAll(){
-  const [reddit, google, hn, devto, xtrends, tiktok] = await Promise.all([fetchReddit(), fetchGoogle(), fetchHN(), fetchDevTo(), fetchXTrends(), fetchTikTok()]);
-  CACHE.items = merge(CACHE.items, [...reddit, ...google, ...hn, ...devto, ...xtrends, ...tiktok]);
+  const [reddit, google, hn, devto, xtrends, tiktok, aljazeera] = await Promise.all([fetchReddit(), fetchGoogle(), fetchHN(), fetchDevTo(), fetchXTrends(), fetchTikTok(), fetchAlJazeera()]);
+  CACHE.items = merge(CACHE.items, [...reddit, ...google, ...hn, ...devto, ...xtrends, ...tiktok, ...aljazeera]);
   CACHE.lastFetch = Date.now();
-  const counts = { Reddit: reddit.length, 'Google Trends': google.length, 'Hacker News': hn.length, 'Dev.to': devto.length, 'X Trends': xtrends.length, TikTok: tiktok.length };
+  const counts = { Reddit: reddit.length, 'Google Trends': google.length, 'Hacker News': hn.length, 'Dev.to': devto.length, 'X Trends': xtrends.length, TikTok: tiktok.length, 'Al Jazeera': aljazeera.length };
   console.log(`[${new Date().toLocaleTimeString()}] Fetched:`, counts, '| Total cache:', CACHE.items.length);
   saveCacheToDisk();
 }
