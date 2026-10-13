@@ -56,42 +56,78 @@ function getAttr(block, tag, attr) {
 }
 
 async function fetchReddit() {
+  const subs = ['popular','technology','worldnews','programming','business'];
+  // Try JSON API first (has upvotes/comments), fall back to RSS
+  const jsonResults = await Promise.allSettled(subs.map(sub =>
+    fetch(`https://www.reddit.com/r/${sub}.json?limit=25&raw_json=1`, {
+      headers: {
+        'User-Agent': CHROME_UA,
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache'
+      },
+      redirect: 'follow'
+    }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  ));
+
+  const items = [];
+  let jsonWorked = false;
+
+  for (let si = 0; si < jsonResults.length; si++) {
+    const r = jsonResults[si];
+    if (r.status !== 'fulfilled') continue;
+    const posts = r.value?.data?.children || [];
+    if (!posts.length) continue;
+    jsonWorked = true;
+    for (const child of posts) {
+      const p = child.data;
+      if (!p || !p.title) continue;
+      const sub = p.subreddit || subs[si];
+      const ups = p.ups || p.score || 0;
+      const comments = p.num_comments || 0;
+      const seenAt = p.created_utc ? p.created_utc * 1000 : Date.now();
+      const upsFmt = ups >= 1000 ? (ups/1000).toFixed(1)+'k' : String(ups);
+      const url = (p.url||'').startsWith('http') ? p.url : `https://www.reddit.com${p.permalink}`;
+      items.push({
+        platform: 'Reddit',
+        title: p.title,
+        meta: `r/${sub} · ${upsFmt} ups · ${comments} comments`,
+        url,
+        tags: ['reddit'],
+        score: ups + comments * 2,
+        seenAt,
+        lastSeen: Date.now()
+      });
+    }
+  }
+
+  if (jsonWorked) return items.filter(i => Date.now() - i.seenAt <= H48);
+
+  // Fallback: RSS (no upvote counts but reliable)
+  console.log('Reddit JSON failed, falling back to RSS');
   try {
-    const subs = ['popular','technology','worldnews','programming','business'];
-    const results = await Promise.allSettled(subs.map(sub =>
-      fetch(`https://www.reddit.com/r/${sub}.json?limit=25&raw_json=1`, {
-        headers: { 'User-Agent': 'TokyoRadar/1.0 (aggregator bot)', 'Accept': 'application/json' },
+    const rssResults = await Promise.allSettled(subs.map(sub =>
+      fetch(`https://www.reddit.com/r/${sub}/.rss`, {
+        headers: { 'User-Agent': CHROME_UA, 'Accept': 'application/xml,text/xml,*/*' },
         redirect: 'follow'
-      }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      }).then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
     ));
-    const items = [];
-    for (const r of results) {
+    const rssItems = [];
+    for (const r of rssResults) {
       if (r.status !== 'fulfilled') continue;
-      const posts = r.value?.data?.children || [];
-      for (const child of posts) {
-        const p = child.data;
-        if (!p || !p.title) continue;
-        const title = p.title;
-        const url = p.url || `https://www.reddit.com${p.permalink}`;
-        const sub = p.subreddit || '';
-        const ups = p.ups || p.score || 0;
-        const comments = p.num_comments || 0;
-        const seenAt = p.created_utc ? p.created_utc * 1000 : Date.now();
-        const upsFmt = ups >= 1000 ? (ups/1000).toFixed(1)+'k' : String(ups);
-        items.push({
-          platform: 'Reddit',
-          title,
-          meta: `r/${sub} · ${upsFmt} ups · ${comments} comments`,
-          url: url.startsWith('http') ? url : `https://www.reddit.com${p.permalink}`,
-          tags: ['reddit'],
-          score: ups + comments * 2,
-          seenAt,
-          lastSeen: Date.now()
-        });
+      const entries = parseXmlItems(r.value, 'entry');
+      for (const e of entries) {
+        const title = getTag(e, 'title');
+        const link = getAttr(e, 'link', 'href') || getTag(e, 'link');
+        const updated = getTag(e, 'updated');
+        const category = getAttr(e, 'category', 'label') || getTag(e, 'category');
+        if (!title || !link) continue;
+        const seenAt = updated ? new Date(updated).getTime() : Date.now();
+        rssItems.push({ platform: 'Reddit', title, meta: category ? `r/${category}` : 'Reddit', url: link, tags: ['reddit'], score: 0, seenAt, lastSeen: Date.now() });
       }
     }
-    return items.filter(i => Date.now() - i.seenAt <= H48);
-  } catch(e) { console.error('Reddit error:', e.message); return []; }
+    return rssItems.filter(i => Date.now() - i.seenAt <= H48);
+  } catch(e) { console.error('Reddit RSS fallback error:', e.message); return []; }
 }
 
 async function fetchGoogle() {
