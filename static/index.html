@@ -1028,18 +1028,14 @@ function starredRender(){
   }
   el.innerHTML=_starred.map(function(i){
     var ago=i.savedAt?Math.round((Date.now()-i.savedAt)/60000)+'m ago':'';
-    var titleEnc=escHtml(i.title||'').replace(/'/g,'&#39;');
-    var metaEnc=escHtml(i.meta||'').replace(/'/g,'&#39;');
-    var urlEnc=escHtml(i.url||'').replace(/'/g,'&#39;');
-    var platEnc=escHtml(i.platform||'');
-    var key=starredKey(i.url,i.title);
-    var btnId=savedBtnId(key);
+    var iid=itemId(i.url,i.title);
+    _itemCache[iid]={title:i.title||'',meta:i.meta||'',url:i.url||'',platform:i.platform||''};
     return '<div class="pulse-item">'+pulseBadge(i.platform||'')+'<div class="pulse-item-body">'+
-      '<div class="pulse-item-title"><a href="'+escHtml(i.url||'')+'" target="_blank" rel="noopener" onclick="markSeen(\''+urlEnc+'\')">'+escHtml(i.title||'')+'</a></div>'+
+      '<div class="pulse-item-title"><a href="'+escHtml(i.url||'')+'" target="_blank" rel="noopener">'+escHtml(i.title||'')+'</a></div>'+
       '<div class="pulse-item-meta">'+escHtml(i.meta||'')+'&nbsp;·&nbsp;starred '+ago+'</div>'+
       '<div class="pulse-item-actions">'+
-        '<button class="launch-btn" onclick="openLaunchModal(\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+platEnc+'\')">🚀 Launch</button>'+
-        '<button class="star-btn starred" onclick="starToggle(this,\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+platEnc+'\');starredRender()">★ Unstar</button>'+
+        '<button class="launch-btn" onclick="icLaunch(\''+iid+'\')">🚀 Launch</button>'+
+        '<button class="star-btn starred" onclick="icStar(this,\''+iid+'\');starredRender()">★ Unstar</button>'+
       '</div></div></div>';
   }).join('');
 }
@@ -1350,45 +1346,69 @@ function pulseBadge(p){
   var label=p==='X Trends'?'𝕏':p==='Hacker News'?'HN':p==='Al Jazeera'?'AJ':p;
   return '<span class="pulse-item-badge '+cls+'">'+label+'</span>';
 }
+/* ── Item cache: store full item data by id so onclick never needs string escaping ── */
+var _itemCache={};
+function itemId(url,title){
+  var k=(url&&url.length>5?url:title)||title||'';
+  return btoa(unescape(encodeURIComponent(k.slice(0,80)))).replace(/[^a-zA-Z0-9]/g,'').slice(0,18);
+}
+function icGet(id){return _itemCache[id]||null;}
+
 function pulseItemHtml(i,q){
   var ago=i.seenAt?Math.round((Date.now()-i.seenAt)/60000)+'m ago':'';
   var viral=isViral(i);
   var viralTag=viral?'<span class="viral-badge">🔥 VIRAL</span>':'';
   var multi=isMultiSignal(i.title,i.platform);
   var multiTag=multi?'<span class="multi-badge">⚡ MULTI</span>':'';
-  // velocity
   var velTag='';
   if(i.velocity>2)velTag='<span class="vel-up">🔺🔺</span>';
   else if(i.velocity>0)velTag='<span class="vel-up">🔺</span>';
-  // watch words
   var watchHit=pwbMatch(i.title+' '+(i.meta||''));
-  // seen
   var seen=isSeen(i.url||i.title);
-  // note
   var nk=noteKey(i.url,i.title);
   var nid=btoa(unescape(encodeURIComponent(nk))).slice(0,12).replace(/[^a-zA-Z0-9]/g,'');
   var hasNote=!!getNote(i.url,i.title);
   var noteText=getNote(i.url,i.title);
-  var titleEnc=escHtml(i.title).replace(/'/g,'&#39;');
-  var metaEnc=escHtml(i.meta||'').replace(/'/g,'&#39;');
-  var urlEnc=escHtml(i.url||'').replace(/'/g,'&#39;');
-  var platEnc=escHtml(i.platform||'');
-  var launchBtn='<button class="launch-btn" onclick="openLaunchModal(\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+platEnc+'\')">🚀 Launch</button>';
+
+  // Store item in cache — buttons reference by id, no string escaping needed
+  var iid=itemId(i.url,i.title);
+  _itemCache[iid]={title:i.title,meta:i.meta||'',url:i.url||'',platform:i.platform||''};
+
   var isSaved=savedHas(i.url||i.title);
   var isStarred=starredHas(i.url||i.title);
-  var starBtn='<button class="star-btn'+(isStarred?' starred':'')+'" id="starbtn-'+savedBtnId(i.url||i.title)+'" onclick="starToggle(this,\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+platEnc+'\')" title="Star this">'+(isStarred?'★':'☆')+'</button>';
-  var saveBtn='<button class="save-btn'+(isSaved?' saved':'')+'" id="sbtn-'+savedBtnId(i.url||i.title)+'" onclick="savedToggle(this,\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+platEnc+'\')\">'+(isSaved?'🔖 Saved':'🔖 Save')+'</button>';
-  var noteBtn='<button class="note-btn'+(hasNote?' has-note':'')+'" id="note-btn-'+nid+'" onclick="toggleNote(\''+nid+'\',\''+urlEnc+'\',\''+titleEnc+'\')">'+(hasNote?'📝':'✎')+'</button>';
-  // title with search highlight + watch word highlight
+
+  var launchBtn='<button class="launch-btn" onclick="icLaunch(\''+iid+'\')">🚀 Launch</button>';
+  var starBtn='<button class="star-btn'+(isStarred?' starred':'')+'" id="starbtn-'+iid+'" onclick="icStar(this,\''+iid+'\')" title="Star this">'+(isStarred?'★':'☆')+'</button>';
+  var saveBtn='<button class="save-btn'+(isSaved?' saved':'')+'" id="sbtn-'+iid+'" onclick="icSave(this,\''+iid+'\')">'+(isSaved?'🔖 Saved':'🔖 Save')+'</button>';
+  var noteBtn='<button class="note-btn'+(hasNote?' has-note':'')+'" id="note-btn-'+nid+'" onclick="icNote(\''+nid+'\',\''+iid+'\')">'+(hasNote?'📝':'✎')+'</button>';
+
   var titleHtml=q?highlightMatch(i.title,q):escHtml(i.title);
   if(_pwbWords.length&&watchHit)titleHtml=highlightWatchWords(q?titleHtml:i.title);
   var metaHtml=q?highlightMatch(i.meta||'',q):escHtml(i.meta||'');
-  var noteWrap='<div id="note-wrap-'+nid+'" style="display:none"><div class="note-inline"><textarea placeholder="Add a note…" rows="2"></textarea><button class="note-save" onclick="submitNote(\''+nid+'\',\''+urlEnc+'\',\''+titleEnc+'\')">Save</button></div></div>';
-  var notePrev=noteText?'<div class="note-text" id="note-prev-'+nid+'" onclick="toggleNote(\''+nid+'\',\''+urlEnc+'\',\''+titleEnc+'\')" >📝 '+escHtml(noteText.slice(0,80))+'</div>':'<div class="note-text" id="note-prev-'+nid+'" style="display:none"></div>';
+
+  var noteWrap='<div id="note-wrap-'+nid+'" style="display:none"><div class="note-inline"><textarea placeholder="Add a note…" rows="2"></textarea><button class="note-save" onclick="icSubmitNote(\''+nid+'\',\''+iid+'\')">Save</button></div></div>';
+  var notePrev=noteText?'<div class="note-text" id="note-prev-'+nid+'" onclick="icNote(\''+nid+'\',\''+iid+'\')">📝 '+escHtml(noteText.slice(0,80))+'</div>':'<div class="note-text" id="note-prev-'+nid+'" style="display:none"></div>';
+
   var classes='pulse-item'+(viral?' viral':'')+(watchHit?' watch-hit':'')+(seen?' seen-item':'');
-  var openLink='href="'+escHtml(i.url)+'" target="_blank" rel="noopener" onclick="markSeen(\''+urlEnc+'\')"';
+  var urlSafe=escHtml(i.url||'');
+  var openLink='href="'+urlSafe+'" target="_blank" rel="noopener" onclick="markSeen(\''+iid+'\')"';
   return '<div class="'+classes+'">'+pulseBadge(i.platform)+'<div class="pulse-item-body"><div class="pulse-item-title"><a '+openLink+'>'+titleHtml+'</a>'+viralTag+multiTag+velTag+'</div><div class="pulse-item-meta">'+metaHtml+'&nbsp;·&nbsp;'+ago+'</div>'+notePrev+noteWrap+'<div class="pulse-item-actions">'+launchBtn+starBtn+saveBtn+noteBtn+'</div></div></div>';
 }
+
+/* ── Cache-based action handlers (no escaping issues) ── */
+function icLaunch(iid){var i=icGet(iid);if(i)openLaunchModal(i.title,i.meta,i.url,i.platform);}
+function icStar(btn,iid){var i=icGet(iid);if(i)starToggle(btn,i.title,i.meta,i.url,i.platform);}
+function icSave(btn,iid){var i=icGet(iid);if(i)savedToggle(btn,i.title,i.meta,i.url,i.platform);}
+function icNote(nid,iid){var i=icGet(iid);if(i)toggleNote(nid,i.url,i.title);}
+function icSubmitNote(nid,iid){var i=icGet(iid);if(i)submitNote(nid,i.url,i.title);}
+// markSeen by iid — look up url from cache
+var _origMarkSeen=markSeen;
+markSeen=function(key){
+  // key may be iid or url
+  var c=_itemCache[key];
+  if(c&&c.url)_origMarkSeen(c.url);
+  else _origMarkSeen(key);
+};
 function highlightMatch(text,q){
   if(!q)return escHtml(text);
   var safe=escHtml(text);
@@ -1733,17 +1753,14 @@ function savedRender(){
   }
   el.innerHTML=_saved.map(function(i){
     var ago=i.savedAt?Math.round((Date.now()-i.savedAt)/60000)+'m ago':'';
-    var titleEnc=escHtml(i.title||'').replace(/'/g,'&#39;');
-    var metaEnc=escHtml(i.meta||'').replace(/'/g,'&#39;');
-    var urlEnc=escHtml(i.url||'').replace(/'/g,'&#39;');
-    var key=savedKey(i.url,i.title);
-    var btnId=savedBtnId(key);
+    var iid=itemId(i.url,i.title);
+    _itemCache[iid]={title:i.title||'',meta:i.meta||'',url:i.url||'',platform:i.platform||''};
     return '<div class="pulse-item">'+pulseBadge(i.platform||'')+'<div class="pulse-item-body">'+
       '<div class="pulse-item-title"><a href="'+escHtml(i.url||'')+'" target="_blank" rel="noopener">'+escHtml(i.title||'')+'</a></div>'+
       '<div class="pulse-item-meta">'+escHtml(i.meta||'')+'&nbsp;·&nbsp;saved '+ago+'</div>'+
       '<div class="pulse-item-actions">'+
-        '<button class="launch-btn" onclick="openLaunchModal(\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+escHtml(i.platform||'')+'\')">🚀 Launch</button>'+
-        '<button class="save-btn saved" id="sbtn-'+btnId+'" onclick="savedToggle(this,\''+titleEnc+'\',\''+metaEnc+'\',\''+urlEnc+'\',\''+escHtml(i.platform||'')+'\');savedRender()">⭐ Saved</button>'+
+        '<button class="launch-btn" onclick="icLaunch(\''+iid+'\')">🚀 Launch</button>'+
+        '<button class="save-btn saved" onclick="icSave(this,\''+iid+'\');savedRender()">🔖 Saved</button>'+
       '</div></div></div>';
   }).join('');
 }
