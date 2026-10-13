@@ -1314,16 +1314,22 @@ function pulseFetch(){
     fetch('/api/trends').then(function(r){return r.json()}).catch(function(){return{all_items:[],now_items:[],updated_at:0}})
   ]).then(function(results){
     var server=results[0];
+    var clientNow=Date.now();
     var combined=[].concat(server.all_items||[]);
     var seen=new Map();
-    combined.forEach(function(i){var k=(i.platform+'::'+i.title).toLowerCase();if(!seen.has(k))seen.set(k,i);});
+    // Stamp clientSeenAt = now on every item so time filters work reliably
+    combined.forEach(function(i){
+      i.clientSeenAt=clientNow;
+      var k=(i.platform+'::'+i.title).toLowerCase();
+      if(!seen.has(k))seen.set(k,i);
+    });
     // Sort: viral items first, then by recency
     var all=Array.from(seen.values()).sort(function(a,b){
       var av=isViral(a)?1:0,bv=isViral(b)?1:0;
       if(bv!==av)return bv-av;
       return b.seenAt-a.seenAt;
     });
-    pulseData={all_items:all,updated_at:Date.now()};
+    pulseData={all_items:all,updated_at:clientNow};
     var viral=all.filter(isViral).length;
     _multiMap=buildMultiSignalMap(all);
     multiUpdateCount();
@@ -1403,9 +1409,9 @@ function pulseFilteredItems(){
   }
   var items=(pulseData.all_items||[]).slice();
   // Time filter
-  if(pulseTime==='6h'){var c6=6*3600000;items=items.filter(function(i){var t=i.lastSeen||i.seenAt||0;return t&&Date.now()-t<=c6;});}
-  else if(pulseTime==='12h'){var c12=12*3600000;items=items.filter(function(i){var t=i.lastSeen||i.seenAt||0;return t&&Date.now()-t<=c12;});}
-  else if(pulseTime==='24h'){var c24=24*3600000;items=items.filter(function(i){var t=i.lastSeen||i.seenAt||0;return t&&Date.now()-t<=c24;});}
+  if(pulseTime==='6h'){var c6=6*3600000;items=items.filter(function(i){return Date.now()-(i.clientSeenAt||0)<=c6;});}
+  else if(pulseTime==='12h'){var c12=12*3600000;items=items.filter(function(i){return Date.now()-(i.clientSeenAt||0)<=c12;});}
+  else if(pulseTime==='24h'){var c24=24*3600000;items=items.filter(function(i){return Date.now()-(i.clientSeenAt||0)<=c24;});}
   // Platform / special filter
   if(pulseFilter==='__multi'){
     items=items.filter(function(i){return isMultiSignal(i.title,i.platform);});
