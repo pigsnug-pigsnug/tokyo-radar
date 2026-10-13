@@ -144,54 +144,56 @@ a{color:inherit}
 #launch-modal .lm-regen:hover{border-color:#5A6AFF;color:#5A6AFF}
 
 /* ════════════════════════════════════════════
-   RADAR TAB
+   RADAR TAB  (Tinance-style)
    ════════════════════════════════════════════ */
-#radar-panel{min-height:calc(100vh - var(--tab-h));background:#08090A;color:#E8EAF0}
-.radar-top{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid #1C1E26;flex-wrap:wrap}
-.radar-top .rt-sol{font-family:var(--mono);font-size:13px;color:#A0A8B8}
-.radar-top .rt-status{font-family:var(--mono);font-size:12px}
-.radar-top .rt-status.live{color:#00E676}
-.radar-top .rt-status.dead{color:#FF4444}
-.radar-top .rt-count{font-family:var(--mono);font-size:12px;color:#6B7280}
-.radar-top .rt-spacer{flex:1}
-.radar-top .rt-btn{padding:5px 12px;border-radius:6px;border:1px solid #2A2D38;background:transparent;color:#A0A8B8;font-size:12px;cursor:pointer;font-family:var(--mono)}
-.radar-top .rt-btn:hover{background:#1C1E26;color:#E8EAF0}
-.radar-body{display:grid;grid-template-columns:1fr 320px;min-height:calc(100vh - var(--tab-h) - 49px)}
-@media(max-width:700px){.radar-body{grid-template-columns:1fr}}
-@media(max-width:760px){#radar-top-cols{grid-template-columns:1fr!important}}
-.radar-words{padding:16px 20px;overflow-y:auto}
-.radar-words h3{font-family:var(--display);font-size:15px;letter-spacing:1px;color:#7B8A9C;margin-bottom:12px}
-.rw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
-.rw-chip{padding:8px 12px;border-radius:8px;border:1px solid #1C1E26;background:#0F1015;cursor:pointer;transition:all .15s}
-.rw-chip:hover{border-color:#2A2D38}
-.rw-chip.watch{border-color:var(--brand);background:rgba(209,15,34,.08)}
-.rw-chip.hot{border-color:#FFD600;background:rgba(255,214,0,.07)}
-.rw-word{font-family:var(--mono);font-size:13px;font-weight:600;color:#E8EAF0;margin-bottom:4px}
-.rw-bars{display:flex;gap:4px;align-items:flex-end;height:24px;margin-bottom:4px}
-.rw-bar{width:14px;border-radius:2px 2px 0 0;min-height:2px}
-.rw-bar.b30{background:var(--brand)}
-.rw-bar.b120{background:#5A6AFF}
-.rw-bar.b360{background:#2A2D38}
-.rw-nums{font-family:var(--mono);font-size:10px;color:#6B7280;display:flex;gap:6px}
-.rw-speed{font-size:10px;color:#FFD600;font-family:var(--mono)}
-.radar-side{border-left:1px solid #1C1E26;padding:16px}
-.rs-section{margin-bottom:20px}
-.rs-section h4{font-family:var(--display);font-size:13px;letter-spacing:1px;color:#7B8A9C;margin-bottom:10px}
-.rs-coin-input{display:flex;gap:6px;margin-bottom:8px}
-.rs-coin-input input{flex:1;background:#0F1015;border:1px solid #2A2D38;border-radius:6px;padding:6px 10px;color:#E8EAF0;font-family:var(--mono);font-size:12px;outline:none}
-.rs-coin-input input:focus{border-color:var(--brand)}
-.rs-coin-input button{padding:6px 10px;border-radius:6px;border:none;background:var(--brand);color:#fff;font-size:12px;font-family:var(--mono)}
-#radar-coin-result{font-size:12px;font-family:var(--mono);line-height:1.6}
-.radar-stream{border-top:1px solid #1C1E26;padding:10px 20px}
-.radar-stream h4{font-family:var(--display);font-size:13px;letter-spacing:1px;color:#7B8A9C;margin-bottom:8px}
-.stream-list{display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto}
-.stream-item{display:flex;gap:10px;align-items:baseline;font-size:12px;padding:3px 0;border-bottom:1px solid #0F1015}
-.stream-item .si-name{font-weight:600;color:#E8EAF0;font-family:var(--mono);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.stream-item .si-sym{color:#6B7280;font-family:var(--mono);font-size:11px;width:60px;flex-shrink:0}
-.stream-item .si-time{color:#3D4450;font-family:var(--mono);font-size:10px;flex-shrink:0}
-.radar-watch-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.watch-chip{padding:3px 8px;border-radius:20px;background:rgba(209,15,34,.15);border:1px solid var(--brand);color:var(--brand);font-size:11px;font-family:var(--mono);cursor:pointer}
-.watch-chip:hover{background:var(--brand);color:#fff}
+#radar-panel{background:#08090A;color:#E8EAF0;min-height:calc(100vh - var(--tab-h))}
+.rdr-wrap{max-width:1180px;margin:0 auto;padding:14px 16px}
+/* header */
+.rdr-header{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid #1C1E26}
+.rdr-pill{display:flex;gap:8px;align-items:center;border:1px solid #2A2D38;border-radius:999px;padding:5px 12px;font:500 13px var(--mono);background:#0F1015;color:#A0A8B8}
+.rdr-dot{width:9px;height:9px;border-radius:50%;background:#FF4444;flex-shrink:0}.rdr-dot.on{background:#00E676}
+.rdr-price b{font-size:17px;color:#E8EAF0}
+.rdr-btn-sm{border:1px solid #2A2D38;background:#1C1E26;border-radius:6px;padding:3px 9px;cursor:pointer;font-size:12px;color:#A0A8B8}
+.rdr-btn-sm:hover{border-color:var(--brand)}
+/* info banner */
+.rdr-explain{background:rgba(31,79,216,.10);border:1px solid rgba(123,165,255,.25);border-radius:10px;padding:10px 14px;margin:12px 0;font-size:13.5px;color:#A0A8B8;line-height:1.5}
+.rdr-explain b{color:#7BA5FF}
+/* 2-col top */
+.rdr-cols{display:grid;gap:14px;grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin-top:14px}
+@media(max-width:820px){.rdr-cols{grid-template-columns:1fr}}
+/* panels */
+.rdr-panel{background:#0F1015;border:1px solid #1C1E26;border-radius:12px;padding:14px;min-width:0}
+.rdr-h2{margin:0 0 10px;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#E8EAF0;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+/* inputs + buttons */
+.rdr-row{display:flex;gap:8px;align-items:center}
+.rdr-input{background:#08090A;border:1px solid #2A2D38;border-radius:8px;padding:8px 11px;color:#E8EAF0;font-size:14px;font-family:inherit;width:100%;min-width:0;outline:none}
+.rdr-input:focus{border-color:var(--brand)}
+.rdr-num{background:#08090A;border:1px solid #2A2D38;border-radius:6px;padding:3px 6px;width:56px;display:inline-block;color:#E8EAF0;font-size:12px;font-family:var(--mono)}
+.rdr-btn{border:1px solid #2A2D38;background:#1C1E26;border-radius:8px;padding:7px 13px;cursor:pointer;font-weight:600;font-size:13px;color:#E8EAF0;white-space:nowrap}
+.rdr-btn:hover{border-color:var(--brand)}
+.rdr-btn.rdr-primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.rdr-btn.rdr-sm{padding:4px 9px;font-size:12px}
+/* hint */
+.rdr-hint{font-size:12px;color:#6B7280;margin-top:6px;font-family:var(--mono);line-height:1.6}
+/* verdict */
+.rdr-verdict{display:flex;gap:12px;align-items:center;margin:10px 0;flex-wrap:wrap}
+.rdr-vtag{font:800 20px/1 var(--body);text-transform:uppercase;letter-spacing:.05em;padding:7px 13px;border-radius:8px;color:#fff}
+.rdr-vtag.go{background:#0A9B45}.rdr-vtag.twist{background:#A86B0B}.rdr-vtag.skip{background:var(--brand)}
+.rdr-nums{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:#6B7280;margin-bottom:8px}
+.rdr-nums b{display:block;font:800 20px/1.1 var(--body);color:#E8EAF0}
+/* chip */
+.rdr-chip{display:inline-flex;gap:6px;align-items:center;background:#1C1E26;border:1px solid #2A2D38;border-radius:999px;padding:3px 10px;font-size:12px;font-family:var(--mono);color:#E8EAF0}
+.rdr-chip button{border:0;background:none;cursor:pointer;color:#6B7280;padding:0}
+/* live feed */
+.rdr-feed{max-height:280px;overflow:auto;font:12.5px/1.6 var(--mono);color:#A0A8B8}
+.rdr-feed div{border-bottom:1px dashed #1C1E26;padding:2px 0}
+/* hot words table */
+.rdr-table{width:100%;border-collapse:collapse;font-size:13px}
+.rdr-table th{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:#6B7280;text-align:left;padding:6px 8px;border-bottom:1px solid #1C1E26}
+.rdr-table td{padding:6px 8px;border-bottom:1px solid #1C1E26;color:#E8EAF0;overflow-wrap:anywhere}
+.rdr-n{text-align:right!important;font-family:var(--mono)}
+.rdr-table tr.rdr-flash td{animation:rdrfl 1.2s ease-in-out 3}
+@keyframes rdrfl{0%,100%{background:transparent}50%{background:rgba(255,70,85,.15)}}
 
 /* ════════════════════════════════════════════
    DESK TAB (Tinance layout)
@@ -502,79 +504,55 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
 
 <!-- ── RADAR PANEL ── -->
 <div id="radar-panel" class="tab-panel">
-  <!-- Status bar -->
-  <div class="radar-top">
-    <span class="rt-status dead" id="radar-status">● Disconnected</span>
-    <span class="rt-sol" id="radar-sol">1 SOL = —</span>
-    <span class="rt-count" id="radar-rate">— per minute</span>
-    <div class="rt-spacer"></div>
-    <span class="rt-count" id="radar-count" style="color:#6B7280">0 coins</span>
+<div class="rdr-wrap">
+
+  <!-- Header row: status pill · SOL price · clock · copy SOL -->
+  <div class="rdr-header">
+    <div class="rdr-pill"><span class="rdr-dot" id="radar-dot"></span><span id="radar-status">Connecting…</span></div>
+    <div class="rdr-pill rdr-price">1 SOL = <b id="radar-sol">…</b><button class="rdr-btn-sm" id="radar-solcopy">Copy</button></div>
+    <div class="rdr-pill" id="radar-clk">--:--:-- IST</div>
+    <div style="flex:1"></div>
+    <span class="rdr-pill" id="radar-count" style="color:#6B7280;font-size:12px">0 coins</span>
   </div>
 
   <!-- Info banner -->
-  <div style="background:rgba(31,79,216,.10);border:1px solid rgba(123,165,255,.25);border-radius:10px;padding:10px 16px;margin:12px 16px;font-size:13px;color:#A0A8B8;line-height:1.5">
-    <b style="color:#7BA5FF">Keep this tab open.</b> It listens to every new Pump.fun coin while it is open, counts the words, and checks any coin name you type. Closing the tab stops it from collecting. It remembers the last 6 hours it saw when you reopen it.
-  </div>
+  <div class="rdr-explain"><b>Keep this tab open.</b> It listens to every new Pump.fun coin while it is open, counts the words, and checks any coin name you type. Closing the tab stops it from collecting. It remembers the last 6 hours it saw when you reopen it.</div>
 
   <!-- Top 2-col: Coin Check (left) + Live Stream (right) -->
-  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:16px;padding:0 16px 16px">
+  <div class="rdr-cols">
+    <section class="rdr-panel">
+      <h2 class="rdr-h2">Coin check</h2>
+      <div class="rdr-row">
+        <input type="search" id="radar-coin-q" placeholder="Type a coin name to check…" autocomplete="off" class="rdr-input" onkeydown="if(event.key==='Enter')radarCoinCheck()">
+        <button class="rdr-btn rdr-primary" onclick="radarCoinCheck()">Check</button>
+      </div>
+      <div class="rdr-hint">Looks up the name on Dexscreener (up to 30 results) and in the new coins this page has seen. Copy limit: <input type="number" id="radar-limit" min="1" value="5" class="rdr-num"></div>
+      <div id="radar-coin-result"></div>
+    </section>
 
-    <!-- Coin Check panel -->
-    <div style="background:#0F1015;border:1px solid #1C1E26;border-radius:12px;padding:16px">
-      <div style="font-family:var(--display);font-size:13px;letter-spacing:1px;color:#7B8A9C;margin-bottom:12px">COIN CHECK</div>
-      <div style="display:flex;gap:8px;margin-bottom:6px">
-        <input type="text" id="radar-coin-q" placeholder="Type a coin name to check…" autocomplete="off"
-          style="flex:1;background:#08090A;border:1px solid #2A2D38;border-radius:8px;padding:9px 12px;color:#E8EAF0;font-size:14px;outline:none;min-width:0"
-          onkeydown="if(event.key==='Enter')radarCoinCheck()">
-        <button onclick="radarCoinCheck()"
-          style="padding:9px 18px;border-radius:8px;border:none;background:var(--brand);color:#fff;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">Check</button>
-      </div>
-      <div style="font-size:12px;color:#6B7280;font-family:var(--mono);margin-bottom:10px">
-        Looks up the name on Dexscreener (up to 30 results) and in the new coins this page has seen.
-        Copy limit: <input type="number" id="radar-limit" min="1" value="5"
-          style="width:52px;padding:2px 6px;background:#08090A;border:1px solid #2A2D38;border-radius:4px;color:#E8EAF0;font-size:12px;font-family:var(--mono);display:inline-block"
-          onchange="try{localStorage.setItem('tr_radar_limit',this.value)}catch(e){}">
-      </div>
-      <div id="radar-coin-result" style="color:#6B7280;font-size:13px;font-family:var(--mono)">Enter a coin name to get a Go / Skip verdict.</div>
-    </div>
-
-    <!-- Live Stream panel -->
-    <div style="background:#0F1015;border:1px solid #1C1E26;border-radius:12px;padding:16px;display:flex;flex-direction:column">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <span style="font-family:var(--display);font-size:13px;letter-spacing:1px;color:#7B8A9C">NEW COINS NOW</span>
-        <span id="radar-rate-badge" style="background:#1C1E26;border:1px solid #2A2D38;border-radius:999px;padding:3px 12px;font-size:12px;font-family:var(--mono);color:#E8EAF0">0 per minute</span>
-      </div>
-      <div id="radar-stream" style="flex:1;overflow-y:auto;max-height:340px;display:flex;flex-direction:column;gap:2px;font-size:12.5px;font-family:var(--mono)">
-        <div style="color:#6B7280">Waiting for coins…</div>
-      </div>
-    </div>
+    <section class="rdr-panel">
+      <h2 class="rdr-h2">New coins now <span class="rdr-chip" id="radar-rate-badge">0 per minute</span></h2>
+      <div class="rdr-feed" id="radar-stream"><div style="color:#6B7280">Waiting for coins…</div></div>
+    </section>
   </div>
 
-  <!-- Hot Words full-width -->
-  <div style="margin:0 16px 16px;background:#0F1015;border:1px solid #1C1E26;border-radius:12px;padding:16px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-      <span style="font-family:var(--display);font-size:13px;letter-spacing:1px;color:#7B8A9C">HOT WORDS</span>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <div style="display:flex;gap:6px">
-          <input type="text" id="radar-watch-q" placeholder="Add a watch word. It flashes when it moves."
-            style="background:#08090A;border:1px solid #2A2D38;border-radius:6px;padding:5px 10px;color:#E8EAF0;font-size:12px;font-family:var(--mono);outline:none;width:260px"
-            onkeydown="if(event.key==='Enter')radarAddWatch()">
-          <button onclick="radarAddWatch()"
-            style="padding:5px 14px;border-radius:6px;border:1px solid #2A2D38;background:#1C1E26;color:#E8EAF0;font-size:12px;font-family:var(--mono);cursor:pointer">Watch</button>
-        </div>
-        <button onclick="radarCopyText()"
-          style="padding:5px 12px;border-radius:6px;border:1px solid #2A2D38;background:#1C1E26;color:#A0A8B8;font-size:12px;font-family:var(--mono);cursor:pointer">Copy radar text</button>
-        <button onclick="radarExport()"
-          style="padding:5px 12px;border-radius:6px;border:1px solid #2A2D38;background:#1C1E26;color:#A0A8B8;font-size:12px;font-family:var(--mono);cursor:pointer">Download radar file</button>
-      </div>
+  <!-- Hot Words full-width table -->
+  <section class="rdr-panel" style="margin-top:14px">
+    <h2 class="rdr-h2">Hot words <span class="rdr-row"><button class="rdr-btn rdr-sm" onclick="radarCopyText()">Copy radar text</button><button class="rdr-btn rdr-sm" onclick="radarExport()">Download radar file</button></span></h2>
+    <div class="rdr-row" style="margin-bottom:8px">
+      <input type="text" id="radar-watch-q" placeholder="Add a watch word. It flashes when it moves." class="rdr-input" onkeydown="if(event.key==='Enter')radarAddWatch()">
+      <button class="rdr-btn" onclick="radarAddWatch()">Watch</button>
     </div>
-    <div class="radar-watch-list" id="radar-watch-list" style="margin-bottom:10px"></div>
-    <div style="font-size:11px;color:#6B7280;font-family:var(--mono);margin-bottom:10px">
-      Speed compares the last 30 min with the usual pace of the last 6 h. Above 3× means the word is picking up.
-      &nbsp;·&nbsp; <span style="color:var(--brand)">■</span> 30 min &nbsp;<span style="color:#5A6AFF">■</span> 2 h &nbsp;<span style="color:#2A2D38">■</span> 6 h &nbsp;·&nbsp; <span style="color:#FFD600">★ picking up (3× avg)</span>
+    <div id="radar-watch-list" style="margin-bottom:8px"></div>
+    <div style="overflow-x:auto">
+      <table class="rdr-table"><thead><tr>
+        <th>Word</th><th class="rdr-n">30 min</th><th class="rdr-n">2 hours</th><th class="rdr-n">6 hours</th><th class="rdr-n">Speed</th>
+      </tr></thead><tbody id="radar-rows"></tbody></table>
     </div>
-    <div class="rw-grid" id="rw-grid"><div style="color:#6B7280;font-family:var(--mono);font-size:12px">Connecting to Pump.fun…</div></div>
-  </div>
+    <div class="rdr-hint" style="margin-top:8px">Speed compares the last 30 minutes with the usual pace of the last 6 hours. Above 3× means the word is picking up.</div>
+  </section>
+
+</div>
 </div>
 
 <!-- ── MULTI-SIGNAL PANEL ── -->
@@ -1802,14 +1780,24 @@ var STOP_STR='the and for with you your are was this that coin token sol solana 
 var STOP={};STOP_STR.split(' ').forEach(function(w){STOP[w]=1});
 var MIN=60000,H2=2*3600000,H6=6*3600000;
 
+function radarIst(){var p={};new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).forEach(function(x){p[x.type]=x.value});return p.hour+':'+p.minute+':'+p.second}
 function radarInit(){
   try{var saved=localStorage.getItem('tr_events');if(saved)rdrEvents=JSON.parse(saved)}catch(e){}
   try{var sw=localStorage.getItem('tr_watch');if(sw)rdrWatch=JSON.parse(sw)}catch(e){}
   try{var lim=localStorage.getItem('tr_radar_limit');if(lim){var li=document.getElementById('radar-limit');if(li)li.value=lim;}}catch(e){}
+  // IST clock
+  var clk=document.getElementById('radar-clk');
+  if(clk){clk.textContent=radarIst()+' IST';setInterval(function(){clk.textContent=radarIst()+' IST'},1000);}
+  // SOL copy
+  var sc=document.getElementById('radar-solcopy');
+  if(sc)sc.onclick=function(){if(rdrSolUsd){try{navigator.clipboard.writeText(String(rdrSolUsd))}catch(e){}}};
+  // limit persistence
+  var limEl=document.getElementById('radar-limit');
+  if(limEl)limEl.addEventListener('change',function(){try{localStorage.setItem('tr_radar_limit',this.value)}catch(e){}});
   rdrConnect();
   radarFetchSol();
-  setInterval(radarFetchSol,60000);
-  setInterval(radarRender,4000);
+  setInterval(radarFetchSol,30000);
+  setInterval(radarRender,5000);
   radarRender();
   renderWatchList();
 }
@@ -1833,10 +1821,9 @@ function rdrConnect(){
 }
 function rdrRetry(){rdrTry++;setTimeout(rdrConnect,Math.min(30000,1500*rdrTry))}
 function radarStatus(ok,msg){
-  var el=document.getElementById('radar-status');
-  if(el){el.textContent=ok?'● '+msg:'○ '+msg;el.className='rt-status '+(ok?'live':'dead')}
+  var el=document.getElementById('radar-status');if(el)el.textContent=msg;
+  var dot=document.getElementById('radar-dot');if(dot)dot.className='rdr-dot'+(ok?' on':'');
 }
-
 function rdrTokens(e){
   var seen={};(e.n+' '+e.s).toLowerCase().split(/[^a-z0-9]+/).forEach(function(w){
     if(w.length>=3&&!/^\d+$/.test(w)&&!STOP[w])seen[w]=1});
@@ -1848,36 +1835,35 @@ function rdrCounts(){
     var c=o[w]||(o[w]={c30:0,c120:0,c360:0});c.c360++;if(age<H2)c.c120++;if(age<30*MIN)c.c30++})});
   return o;
 }
+var _rdrLastC30={};
 function radarRender(){
+  var now=Date.now();
+  rdrEvents=rdrEvents.filter(function(e){return now-e.t<H6});
   // per-minute rate
-  var now2=Date.now();
-  var per=rdrEvents.filter(function(e){return now2-e.t<60000}).length;
-  var rateEl=document.getElementById('radar-rate');
-  if(rateEl)rateEl.textContent=per+' per minute';
-  var badgeEl=document.getElementById('radar-rate-badge');
-  if(badgeEl)badgeEl.textContent=per+' per minute';
+  var per=rdrEvents.filter(function(e){return now-e.t<MIN}).length;
+  var badge=document.getElementById('radar-rate-badge');if(badge)badge.textContent=per+' per minute';
+  var cnt=document.getElementById('radar-count');if(cnt)cnt.textContent=rdrEvents.length+' coins';
   var c=rdrCounts();
-  var words=Object.keys(c).filter(function(w){return c[w].c360>=2||rdrWatch.indexOf(w)>-1});
-  rdrWatch.forEach(function(w){if(!c[w]){c[w]={c30:0,c120:0,c360:0};words.push(w)}});
-  words.sort(function(a,b){return (c[b].c30||0)-(c[a].c30||0)||(c[b].c360||0)-(c[a].c360||0)});
-  words=words.slice(0,60);
-  var maxC=Math.max(1,...words.map(function(w){return c[w].c360}));
-  var grid=document.getElementById('rw-grid');
-  if(!grid)return;
-  if(!words.length){grid.innerHTML='<div style="color:#6B7280;font-family:var(--mono);font-size:12px">Waiting for data…</div>';return}
-  grid.innerHTML=words.map(function(w){
-    var x=c[w];var base=x.c360/12;var speed=base>0?x.c30/base:0;
-    var isWatch=rdrWatch.indexOf(w)>-1;var isHot=speed>3;
-    var h30=Math.max(4,Math.round((x.c30/Math.max(1,c[words[0]].c30||1))*32));
-    var h120=Math.max(2,Math.round((x.c120/Math.max(1,c[words[0]].c120||x.c120||1))*32));
-    var h360=Math.max(2,Math.round((x.c360/maxC)*32));
-    return '<div class="rw-chip'+(isWatch?' watch':'')+(isHot?' hot':'')+'" onclick="rdrToggleWatch(\''+w+'\')">'+
-      '<div class="rw-word">'+w+'</div>'+
-      '<div class="rw-bars"><div class="rw-bar b360" style="height:'+h360+'px"></div><div class="rw-bar b120" style="height:'+h120+'px"></div><div class="rw-bar b30" style="height:'+h30+'px"></div></div>'+
-      '<div class="rw-nums"><span>30m:'+x.c30+'</span><span>2h:'+x.c120+'</span><span>6h:'+x.c360+'</span></div>'+
-      (isHot?'<div class="rw-speed">★ picking up</div>':'')+
-    '</div>';
-  }).join('');
+  var list=Object.keys(c).map(function(w){var x=c[w];var base=x.c360/12;return{word:w,c30:x.c30,c120:x.c120,c360:x.c360,speed:base>0?x.c30/base:0}});
+  rdrWatch.forEach(function(w){if(!c[w])list.push({word:w,c30:0,c120:0,c360:0,speed:0})});
+  var show=list.filter(function(x){return x.c360>=3||rdrWatch.indexOf(x.word)>-1})
+    .sort(function(a,b){return(b.c30-a.c30)||(b.c120-a.c120)}).slice(0,40);
+  var tbody=document.getElementById('radar-rows');
+  if(!tbody)return;
+  tbody.innerHTML=show.length?show.map(function(x){
+    var isW=rdrWatch.indexOf(x.word)>-1;
+    var fl=isW&&x.c30>(_rdrLastC30[x.word]||0);
+    return '<tr'+(fl?' class="rdr-flash"':'')+'>'+
+      '<td><b>'+escHtml(x.word)+'</b>'+(isW?' <span class="rdr-chip" style="padding:1px 7px;font-size:11px">watching</span>':'')+'</td>'+
+      '<td class="rdr-n">'+x.c30+'</td>'+
+      '<td class="rdr-n">'+x.c120+'</td>'+
+      '<td class="rdr-n">'+x.c360+'</td>'+
+      '<td class="rdr-n" style="color:'+(x.speed>=3?'#00E676':'#6B7280')+'">'+(x.speed?x.speed.toFixed(1)+'x':'-')+'</td>'+
+    '</tr>';
+  }).join(''):'<tr><td colspan="5" style="color:#6B7280;font-family:var(--mono);font-size:12px;padding:12px 8px">Words show up here after a few minutes of listening.</td></tr>';
+  show.forEach(function(x){_rdrLastC30[x.word]=x.c30});
+  // watch chips
+  renderWatchList();
 }
 function rdrToggleWatch(w){
   var i=rdrWatch.indexOf(w);
@@ -1888,8 +1874,13 @@ function rdrToggleWatch(w){
 function renderWatchList(){
   var el=document.getElementById('radar-watch-list');
   if(!el)return;
-  el.innerHTML=rdrWatch.map(function(w){return '<span class="watch-chip" onclick="rdrToggleWatch(\''+w+'\')">'+w+' ✕</span>'}).join('');
+  el.innerHTML=rdrWatch.map(function(w){return '<span class="rdr-chip" style="margin:2px 4px 2px 0">'+escHtml(w)+' <button data-rdrm="'+escHtml(w)+'" style="border:0;background:none;cursor:pointer;color:#6B7280;padding:0;font-size:12px">x</button></span>'}).join('');
 }
+// delegate remove clicks for watch chips
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-rdrm]');
+  if(b){rdrToggleWatch(b.dataset.rdrm);}
+});
 function radarAddWatch(){
   var inp=document.getElementById('radar-watch-q');
   if(!inp)return;
@@ -1897,34 +1888,25 @@ function radarAddWatch(){
   if(w&&rdrWatch.indexOf(w)===-1){rdrWatch.push(w);try{localStorage.setItem('tr_watch',JSON.stringify(rdrWatch))}catch(e){}}
   inp.value='';renderWatchList();radarRender();
 }
-var _streamItems=[];
 function streamPush(d){
-  _streamItems.unshift({n:d.name,s:d.symbol||'',m:d.mint||'',t:Date.now()});
-  if(_streamItems.length>80)_streamItems=_streamItems.slice(0,80);
   var el=document.getElementById('radar-stream');
   if(!el)return;
-  // Clear "Waiting" placeholder on first coin
-  if(el.firstChild&&el.firstChild.textContent==='Waiting for coins…')el.innerHTML='';
-  el.innerHTML=_streamItems.slice(0,40).map(function(i){
-    var mintLink=i.m?'https://pump.fun/coin/'+escHtml(i.m):'#';
-    return '<div style="border-bottom:1px dashed #1C1E26;padding:3px 0;display:flex;gap:8px;align-items:baseline">'+
-      '<b style="color:#E8EAF0;font-family:var(--mono);flex-shrink:0">'+escHtml(i.s)+'</b>'+
-      '<span style="color:#A0A8B8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(i.n)+'</span>'+
-      '<a href="'+mintLink+'" target="_blank" rel="noopener" style="color:var(--brand);flex-shrink:0;font-size:11px">open</a>'+
-    '</div>';
-  }).join('');
+  if(el.firstChild&&el.firstChild.style&&el.firstChild.style.color==='rgb(107, 114, 128)')el.innerHTML='';
+  var row=document.createElement('div');
+  row.innerHTML='<b>'+escHtml(d.symbol||'')+'</b> '+escHtml(d.name||'')+' <a href="https://pump.fun/coin/'+escHtml(d.mint||'')+'" target="_blank" rel="noopener" style="color:var(--brand)">open</a>';
+  el.insertBefore(row,el.firstChild);
+  while(el.children.length>40)el.removeChild(el.lastChild);
 }
 function radarFetchSol(){
-  fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd').then(function(r){return r.json()}).then(function(d){
-    rdrSolUsd=d&&d.solana&&d.solana.usd;
-    var el=document.getElementById('radar-sol');
-    if(el&&rdrSolUsd)el.innerHTML='1 SOL = <b style="font-size:16px">$'+rdrSolUsd.toFixed(2)+'</b>';
+  fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd').then(function(r){return r.json()}).then(function(j){
+    var p=j&&j.solana&&j.solana.usd;if(!p)throw 0;
+    rdrSolUsd=Math.round(p*100)/100;
+    var el=document.getElementById('radar-sol');if(el)el.textContent='$'+rdrSolUsd.toFixed(2);
   }).catch(function(){
-    fetch('https://lite-api.jup.ag/price/v3?ids=So11111111111111111111111111111111111111112').then(function(r){return r.json()}).then(function(d){
-      var k=d&&d['So11111111111111111111111111111111111111112'];
-      rdrSolUsd=k&&(k.usdPrice||k.price);
-      var el=document.getElementById('radar-sol');
-      if(el&&rdrSolUsd)el.innerHTML='1 SOL = <b style="font-size:16px">$'+(+rdrSolUsd).toFixed(2)+'</b>';
+    fetch('https://lite-api.jup.ag/price/v3?ids=So11111111111111111111111111111111111111112').then(function(r){return r.json()}).then(function(j){
+      var k=j&&j['So11111111111111111111111111111111111111112'];var p=k&&(k.usdPrice||k.price);if(!p)throw 0;
+      rdrSolUsd=Math.round(+p*100)/100;
+      var el=document.getElementById('radar-sol');if(el)el.textContent='$'+rdrSolUsd.toFixed(2)+(rdrSolUsd?'':' (old)');
     }).catch(function(){});
   });
 }
