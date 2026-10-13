@@ -1389,8 +1389,7 @@ function pulseFilteredItems(){
   else if(pulseTime==='24h'){var c24=24*3600000;items=items.filter(function(i){return Date.now()-i.seenAt<=c24});}
   // Platform / special filter
   if(pulseFilter==='__starred'){
-    var savedKeys=_saved.map(function(s){return savedKey(s.url,s.title);});
-    items=items.filter(function(i){return savedKeys.indexOf(savedKey(i.url,i.title))>-1&&savedHas(i.url||i.title);});
+    items=items.filter(function(i){return starredHas(i.url||i.title);});
   } else if(pulseFilter==='__multi'){
     items=items.filter(function(i){return isMultiSignal(i.title,i.platform);});
   } else if(pulseFilter==='__saved'){
@@ -1432,7 +1431,13 @@ function setPulseTime(t,btn){
 /* ── Sidebar filter/time wrappers ── */
 function setSideFilter(f,btn){
   pulseFilter=f;
-  document.querySelectorAll('.psb-filters .psb-btn').forEach(function(b){b.classList.remove('active')});
+  // Reset time to 'all' when switching platform filters so older articles still show
+  pulseTime='all';
+  document.querySelectorAll('.psb-filters .psb-btn[id^="psb-time"]').forEach(function(b){b.classList.remove('active')});
+  var allTimeBtn=document.getElementById('psb-time-all');
+  if(allTimeBtn)allTimeBtn.classList.add('active');
+  // only clear active on platform/special filter buttons
+  document.querySelectorAll('.psb-filters .psb-btn:not([id^="psb-time"])').forEach(function(b){b.classList.remove('active')});
   if(btn)btn.classList.add('active');
   pulsePage=0;
   pulseRender();
@@ -1458,7 +1463,8 @@ function updateSidebarCounts(){
     el=document.getElementById('psb-bin-count');
     if(el){el.textContent=bin||'';el.style.display=bin?'inline':'none';}
     // multi count
-    var multiItems=pulseItems.filter(function(i){return i._multi&&i._multi>1});
+    var allItems=pulseData.all_items||[];
+    var multiItems=allItems.filter(function(i){return isMultiSignal(i.title,i.platform);});
     el=document.getElementById('psb-multi-count');if(el)el.textContent=multiItems.length||'';
   }catch(e){}
 }
