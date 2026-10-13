@@ -210,44 +210,6 @@ async function fetchXTrends() {
   return [];
 }
 
-async function fetchYouTube() {
-  const now = Date.now();
-  // yewtu.be is reachable but returns HTML — scrape the trending page
-  const hosts = ['https://yewtu.be', 'https://inv.nadeko.net'];
-  for (const host of hosts) {
-    try {
-      const res = await fetch(`${host}/feed/trending`, {
-        headers: { 'User-Agent': CHROME_UA, 'Accept': 'text/html,*/*', 'Accept-Language': 'en-US,en;q=0.9' },
-        redirect: 'follow', signal: AbortSignal.timeout(10000)
-      });
-      if (!res.ok) { console.error(`YouTube ${host} => ${res.status}`); continue; }
-      const html = await res.text();
-      const items = [];
-      const seen = new Set();
-      // Parse video entries: href="/watch?v=ID" with nearby title
-      const videoRx = /href="\/watch\?v=([A-Za-z0-9_-]{11})"[^>]*>([^<]{3,120})</g;
-      const titleRx = /class="[^"]*title[^"]*"[^>]*>[\s\S]*?<a[^>]+href="\/watch\?v=([A-Za-z0-9_-]{11})"[^>]*>([\s\S]*?)<\/a>/gi;
-      // Try both patterns
-      const patterns = [titleRx, videoRx];
-      for (const rx of patterns) {
-        let m; rx.lastIndex = 0;
-        while ((m = rx.exec(html)) !== null && items.length < 30) {
-          const videoId = m[1], rawTitle = m[2].replace(/<[^>]+>/g,'').trim();
-          const title = rawTitle.replace(/\s+/g,' ').trim();
-          if (!title || title.length < 3 || seen.has(videoId)) continue;
-          seen.add(videoId);
-          items.push({ platform: 'YouTube', title, meta: '🌍 Trending', url: `https://www.youtube.com/watch?v=${videoId}`, tags: ['youtube','worldwide'], score: 0, seenAt: now, lastSeen: now });
-        }
-        if (items.length >= 10) break;
-      }
-      if (items.length) { console.log(`YouTube OK via ${host}: ${items.length} videos`); return items; }
-      console.error(`YouTube ${host}: parsed 0 items from HTML`);
-    } catch(e) { console.error(`YouTube ${host} error:`, e.message); }
-  }
-  console.error('YouTube: all sources failed');
-  return [];
-}
-
 async function fetchTikTok() {
   const now = Date.now();
   // trends24.in has a TikTok section — same domain that works for X Trends
@@ -270,7 +232,7 @@ async function fetchTikTok() {
           const skip = new Set('fyp foryou foryoupage trending viral tiktok'.split(' '));
           if (skip.has(tag.toLowerCase()) || seen.has(tag.toLowerCase())) continue;
           seen.add(tag.toLowerCase());
-          items.push({ platform: 'TikTok', title: '#' + tag, meta: 'Trending on TikTok', url: `https://www.tiktok.com/tag/${encodeURIComponent(tag)}`, tags: ['tiktok'], score: 0, seenAt: now, lastSeen: now });
+          items.push({ platform: 'TikTok', title: '#' + tag, meta: 'Trending on TikTok', url: `https://www.google.com/search?q=%23${encodeURIComponent(tag)}+tiktok+trend`, tags: ['tiktok'], score: 0, seenAt: now, lastSeen: now });
         }
         if (items.length >= 5) { console.log(`TikTok OK via trends24 TikTok section: ${items.length} items`); return items; }
       }
@@ -294,7 +256,7 @@ async function fetchTikTok() {
         const title = m[1].trim();
         if (seen.has(title.toLowerCase()) || title.length < 5) continue;
         seen.add(title.toLowerCase());
-        items.push({ platform: 'TikTok', title, meta: 'TikTok trend', url: `https://www.tiktok.com/search?q=${encodeURIComponent(title)}`, tags: ['tiktok'], score: 0, seenAt: now, lastSeen: now });
+        items.push({ platform: 'TikTok', title, meta: 'TikTok trend', url: `https://www.google.com/search?q=${encodeURIComponent(title)}+tiktok+trend`, tags: ['tiktok'], score: 0, seenAt: now, lastSeen: now });
       }
       if (items.length >= 3) { console.log(`TikTok OK via explodingtopics: ${items.length} items`); return items; }
     }
@@ -305,10 +267,10 @@ async function fetchTikTok() {
 }
 
 async function fetchAll(){
-  const [reddit, google, hn, devto, xtrends, youtube, tiktok] = await Promise.all([fetchReddit(), fetchGoogle(), fetchHN(), fetchDevTo(), fetchXTrends(), fetchYouTube(), fetchTikTok()]);
-  CACHE.items = merge(CACHE.items, [...reddit, ...google, ...hn, ...devto, ...xtrends, ...youtube, ...tiktok]);
+  const [reddit, google, hn, devto, xtrends, tiktok] = await Promise.all([fetchReddit(), fetchGoogle(), fetchHN(), fetchDevTo(), fetchXTrends(), fetchTikTok()]);
+  CACHE.items = merge(CACHE.items, [...reddit, ...google, ...hn, ...devto, ...xtrends, ...tiktok]);
   CACHE.lastFetch = Date.now();
-  const counts = { Reddit: reddit.length, 'Google Trends': google.length, 'Hacker News': hn.length, 'Dev.to': devto.length, 'X Trends': xtrends.length, YouTube: youtube.length, TikTok: tiktok.length };
+  const counts = { Reddit: reddit.length, 'Google Trends': google.length, 'Hacker News': hn.length, 'Dev.to': devto.length, 'X Trends': xtrends.length, TikTok: tiktok.length };
   console.log(`[${new Date().toLocaleTimeString()}] Fetched:`, counts, '| Total cache:', CACHE.items.length);
   saveCacheToDisk();
 }
