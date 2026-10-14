@@ -97,6 +97,34 @@ a{color:inherit}
 .psb-bin-btn .psb-bin-count{background:#3A3A3A;color:#A0A8B8;border-radius:8px;padding:1px 5px;font-size:10px}
 /* Status line */
 .psb-status{padding:6px 14px;font-size:10px;color:#6B7280;font-family:var(--mono);border-top:1px solid #1C1E26;margin-top:auto}
+
+/* ── MARKET PANEL ── */
+.mkt-panel{border-top:1px solid #1C1E26;padding:0}
+.mkt-header{display:flex;align-items:center;gap:6px;padding:8px 12px;cursor:pointer;user-select:none}
+.mkt-header:hover{background:rgba(255,255,255,.04)}
+.mkt-title{font-size:11px;font-weight:700;color:#A0A8B8;letter-spacing:.8px;text-transform:uppercase;flex:1}
+.mkt-sol{font-family:var(--mono);font-size:11px;color:#00E676;font-weight:600}
+.mkt-caret{font-size:11px;color:#6B7280;transition:transform .2s}
+.mkt-caret.up{transform:rotate(-90deg)}
+.mkt-body{display:none;padding:0 0 6px}
+.mkt-body.open{display:block}
+.mkt-tabs{display:flex;gap:0;padding:4px 10px 6px;border-bottom:1px solid #1C1E26}
+.mkt-tab{flex:1;padding:3px 0;border:none;background:transparent;color:#6B7280;font-size:10px;font-family:var(--mono);font-weight:600;cursor:pointer;border-radius:3px;transition:all .12s}
+.mkt-tab.active{background:rgba(209,15,34,.18);color:#fff}
+.mkt-chains{padding:4px 0}
+.mkt-chain-row{display:grid;grid-template-columns:28px 1fr auto auto;align-items:center;gap:4px;padding:4px 10px;border-radius:3px;transition:background .1s}
+.mkt-chain-row:hover{background:rgba(255,255,255,.03)}
+.mkt-chain-icon{font-size:13px;text-align:center}
+.mkt-chain-name{font-size:11px;color:#A0A8B8;font-weight:600}
+.mkt-chain-vol{font-family:var(--mono);font-size:10px;color:#E8EAF0;text-align:right}
+.mkt-chain-chg{font-family:var(--mono);font-size:10px;text-align:right;min-width:44px}
+.mkt-chain-chg.up{color:#00E676}
+.mkt-chain-chg.dn{color:#FF4444}
+.mkt-bs-row{display:flex;gap:3px;padding:0 10px 2px;grid-column:1/-1}
+.mkt-buy{font-size:9px;font-family:var(--mono);color:#00E676}
+.mkt-sell{font-size:9px;font-family:var(--mono);color:#FF6B6B}
+.mkt-totals{padding:6px 10px 2px;border-top:1px solid #1C1E26;display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:#6B7280}
+.mkt-loading{padding:12px 10px;font-size:10px;color:#6B7280;font-family:var(--mono)}
 /* Feed area */
 .pulse-feed-area{flex:1;min-width:0;overflow-y:auto}
 .pulse-search-info{font-size:12px;color:#6B7280;font-family:var(--mono);padding:8px 20px;border-bottom:1px solid #1C1E26}
@@ -375,6 +403,10 @@ html[data-theme="tokyonight"] .pulse-item{border-bottom-color:#2a2b3d}
 html[data-theme="tokyonight"] .pulse-box,
 html[data-theme="tokyonight"] .rdr-panel{background:#16213e;border-color:#2a2b3d}
 html[data-theme="tokyonight"] .psb-btn.active{background:rgba(255,0,124,.15);border-left-color:#ff007c}
+html[data-theme="tokyonight"] .mkt-panel{border-top-color:#2a2b3d}
+html[data-theme="tokyonight"] .mkt-tab.active{background:rgba(255,0,124,.2);color:#ff007c}
+html[data-theme="tokyonight"] .mkt-tabs{border-bottom-color:#2a2b3d}
+html[data-theme="tokyonight"] .mkt-totals{border-top-color:#2a2b3d}
 
 /* ── RED-BLACK-WHITE mode ── */
 html[data-theme="rbw"]{
@@ -650,6 +682,31 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
     <!-- Spacer + BIN -->
     <div class="psb-divider"></div>
     <button class="psb-bin-btn" onclick="switchTab('bin')">🗑 BIN <span class="psb-bin-count" id="psb-bin-count" style="display:none"></span></button>
+
+    <!-- ── MARKET PANEL ── -->
+    <div class="psb-divider"></div>
+    <div class="mkt-panel" id="mkt-panel">
+      <div class="mkt-header" onclick="mktToggle()">
+        <span class="mkt-title">📊 Market</span>
+        <span class="mkt-sol" id="mkt-sol-price">—</span>
+        <span class="mkt-caret" id="mkt-caret">▾</span>
+      </div>
+      <div class="mkt-body" id="mkt-body">
+        <!-- time tabs -->
+        <div class="mkt-tabs">
+          <button class="mkt-tab active" onclick="mktSetTime('5m',this)">5m</button>
+          <button class="mkt-tab" onclick="mktSetTime('1h',this)">1h</button>
+          <button class="mkt-tab" onclick="mktSetTime('6h',this)">6h</button>
+          <button class="mkt-tab" onclick="mktSetTime('24h',this)">24h</button>
+        </div>
+        <!-- chain rows -->
+        <div class="mkt-chains" id="mkt-chains">
+          <div class="mkt-loading">Fetching chains…</div>
+        </div>
+        <!-- totals -->
+        <div class="mkt-totals" id="mkt-totals"></div>
+      </div>
+    </div>
 
     <!-- Status -->
     <div class="psb-status" id="pulse-status">Loading…</div>
@@ -1091,6 +1148,7 @@ function appInit(){
   pulseInit();
   radarInit();
   deskInit();
+  mktInit();
   savedUpdateCount();
   historyUpdateCount();
   pwbRender();
@@ -2719,6 +2777,207 @@ function radarExport(){
   var obj=radarObj();
   var b=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
   var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='radar-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.json';a.click();
+}
+
+/* ══════════════════════════════════════════════════════════
+   ████  MARKET PANEL — cross-chain volume + buys/sells  ████
+   ══════════════════════════════════════════════════════════ */
+var _mktTime='1h';
+var _mktOpen=true;
+var _mktData={}; // {chainId: {vol5m,vol1h,vol6h,vol24h,buys1h,sells1h,chg24h,...}}
+var _mktTimer=null;
+
+var MKT_CHAINS=[
+  {id:'solana',    label:'SOL',  icon:'◎'},
+  {id:'ethereum',  label:'ETH',  icon:'Ξ'},
+  {id:'bsc',       label:'BNB',  icon:'⬡'},
+  {id:'base',      label:'BASE', icon:'🔵'},
+  {id:'arbitrum',  label:'ARB',  icon:'🔷'},
+  {id:'polygon',   label:'POL',  icon:'⬟'},
+  {id:'avalanche', label:'AVAX', icon:'🔺'},
+  {id:'ton',       label:'TON',  icon:'💎'},
+];
+
+// Rolling buy/sell buckets from pump.fun WS (Solana only, real-time)
+var _mktSolBuckets=[]; // [{t, buys, sells}] per-minute buckets
+
+function mktToggle(){
+  _mktOpen=!_mktOpen;
+  var body=document.getElementById('mkt-body');
+  var caret=document.getElementById('mkt-caret');
+  if(body)body.classList.toggle('open',_mktOpen);
+  if(caret)caret.classList.toggle('up',!_mktOpen);
+}
+
+function mktSetTime(t,btn){
+  _mktTime=t;
+  document.querySelectorAll('.mkt-tab').forEach(function(b){b.classList.remove('active')});
+  if(btn)btn.classList.add('active');
+  mktRender();
+}
+
+function mktInit(){
+  // Open by default
+  var body=document.getElementById('mkt-body');
+  if(body)body.classList.add('open');
+  // Initial fetch
+  mktFetch();
+  // Re-fetch every 30s
+  _mktTimer=setInterval(mktFetch,30000);
+  // Pipe SOL price to header
+  mktSolPriceTick();
+  setInterval(mktSolPriceTick,15000);
+}
+
+function mktSolPriceTick(){
+  // rdrSolUsd is already fetched by Radar; also works if Radar not visited
+  if(rdrSolUsd){
+    var el=document.getElementById('mkt-sol-price');
+    if(el)el.textContent='$'+rdrSolUsd.toFixed(2);
+  } else {
+    // Fallback fetch
+    fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd')
+      .then(function(r){return r.json()})
+      .then(function(j){
+        var p=j&&j.solana&&j.solana.usd;
+        if(p){rdrSolUsd=Math.round(p*100)/100;}
+        var el=document.getElementById('mkt-sol-price');
+        if(el&&rdrSolUsd)el.textContent='$'+rdrSolUsd.toFixed(2);
+      }).catch(function(){});
+  }
+}
+
+function mktFetch(){
+  // DexScreener /chains gives aggregate stats per chain
+  // We fetch top pairs per chain to build volume + buys/sells
+  var chains=MKT_CHAINS.map(function(c){return c.id;});
+  var promises=chains.map(function(chainId){
+    return fetch('https://api.dexscreener.com/latest/dex/tokens/'+_mktChainAddress(chainId))
+      .then(function(r){return r.ok?r.json():null})
+      .catch(function(){return null;});
+  });
+  // Also fetch overview from DexScreener search for each chain
+  var overviewPromises=chains.map(function(chainId){
+    return fetch('https://api.dexscreener.com/latest/dex/search?q='+chainId)
+      .then(function(r){return r.ok?r.json():null})
+      .catch(function(){return null;});
+  });
+
+  // Use the chain-specific boosted endpoint for real volume
+  Promise.all(MKT_CHAINS.map(function(chain){
+    return fetch('https://api.dexscreener.com/latest/dex/search?q='+encodeURIComponent(chain.label))
+      .then(function(r){return r.ok?r.json():null})
+      .catch(function(){return null;});
+  })).then(function(results){
+    MKT_CHAINS.forEach(function(chain,i){
+      var j=results[i];
+      if(!j||!j.pairs)return;
+      // Filter pairs on this chain only
+      var pairs=j.pairs.filter(function(p){return p.chainId===chain.id;});
+      if(!pairs.length)return;
+      var vol5m=0,vol1h=0,vol6h=0,vol24h=0,buys1h=0,sells1h=0;
+      pairs.forEach(function(p){
+        var v=p.volume||{};
+        vol5m+=(v.m5||0);
+        vol1h+=(v.h1||0);
+        vol6h+=(v.h6||0);
+        vol24h+=(v.h24||0);
+        var txns=p.txns||{};
+        var t1=txns.h1||{};
+        buys1h+=(t1.buys||0);
+        sells1h+=(t1.sells||0);
+      });
+      var priceChg=pairs[0]&&pairs[0].priceChange||{};
+      _mktData[chain.id]={
+        vol5m:vol5m,vol1h:vol1h,vol6h:vol6h,vol24h:vol24h,
+        buys1h:buys1h,sells1h:sells1h,
+        chg1h:priceChg.h1||0,chg24h:priceChg.h24||0,
+        pairs:pairs.length,
+        fetchedAt:Date.now()
+      };
+    });
+    mktRender();
+  });
+}
+
+function _mktChainAddress(chainId){
+  // Native token addresses for volume lookup (fallback)
+  var map={
+    solana:'So11111111111111111111111111111111111111112',
+    ethereum:'0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+    bsc:'0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
+    base:'0x4200000000000000000000000000000000000006',
+    arbitrum:'0x82af49447d8a07e3bd95bd0d56f35241523fbab1',
+    polygon:'0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270',
+    avalanche:'0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7',
+    ton:'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c'
+  };
+  return map[chainId]||'';
+}
+
+function mktFmtVol(n){
+  if(!n||isNaN(n))return '—';
+  if(n>=1e9)return '$'+(n/1e9).toFixed(1)+'B';
+  if(n>=1e6)return '$'+(n/1e6).toFixed(1)+'M';
+  if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'K';
+  return '$'+Math.round(n);
+}
+
+function mktFmtCount(n){
+  if(!n)return '0';
+  if(n>=1000)return (n/1000).toFixed(1)+'k';
+  return String(n);
+}
+
+function mktRender(){
+  var el=document.getElementById('mkt-chains');
+  var totEl=document.getElementById('mkt-totals');
+  if(!el)return;
+
+  var volKey={
+    '5m':'vol5m','1h':'vol1h','6h':'vol6h','24h':'vol24h'
+  }[_mktTime]||'vol1h';
+
+  var chgKey=(_mktTime==='5m'||_mktTime==='1h')?'chg1h':'chg24h';
+
+  var rows=MKT_CHAINS.map(function(chain){
+    var d=_mktData[chain.id]||{};
+    return {chain:chain,vol:d[volKey]||0,buys:d.buys1h||0,sells:d.sells1h||0,chg:d[chgKey]||0,pairs:d.pairs||0};
+  }).sort(function(a,b){return b.vol-a.vol});
+
+  var totalVol=rows.reduce(function(s,r){return s+r.vol;},0);
+  var totalBuys=rows.reduce(function(s,r){return s+r.buys;},0);
+  var totalSells=rows.reduce(function(s,r){return s+r.sells;},0);
+
+  el.innerHTML=rows.map(function(r){
+    var chgClass=r.chg>0?'up':r.chg<0?'dn':'';
+    var chgStr=r.chg?((r.chg>0?'+':'')+r.chg.toFixed(1)+'%'):'—';
+    var buyPct=r.buys+r.sells>0?Math.round(r.buys/(r.buys+r.sells)*100):50;
+    var bsBar='';
+    if(r.buys||r.sells){
+      bsBar='<div style="display:flex;gap:1px;padding:0 10px 3px 42px">'
+        +'<div style="height:3px;border-radius:2px 0 0 2px;background:#00E676;width:'+buyPct+'%;min-width:2px"></div>'
+        +'<div style="height:3px;border-radius:0 2px 2px 0;background:#FF4444;flex:1;min-width:2px"></div>'
+        +'</div>'
+        +'<div style="display:flex;gap:8px;padding:0 10px 4px 42px;font-size:9px;font-family:var(--mono)">'
+        +'<span style="color:#00E676">B '+mktFmtCount(r.buys)+'</span>'
+        +'<span style="color:#FF6B6B">S '+mktFmtCount(r.sells)+'</span>'
+        +'</div>';
+    }
+    return '<div class="mkt-chain-row">'
+      +'<span class="mkt-chain-icon">'+r.chain.icon+'</span>'
+      +'<span class="mkt-chain-name">'+r.chain.label+'</span>'
+      +'<span class="mkt-chain-vol">'+mktFmtVol(r.vol)+'</span>'
+      +'<span class="mkt-chain-chg '+chgClass+'">'+chgStr+'</span>'
+      +'</div>'
+      +bsBar;
+  }).join('');
+
+  if(totEl){
+    totEl.innerHTML='<span>Total: '+mktFmtVol(totalVol)+'</span>'
+      +'<span style="color:#00E676">B '+mktFmtCount(totalBuys)+'</span>'
+      +'<span style="color:#FF6B6B">S '+mktFmtCount(totalSells)+'</span>';
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
