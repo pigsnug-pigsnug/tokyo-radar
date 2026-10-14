@@ -2781,25 +2781,20 @@ function radarExport(){
 
 /* ══════════════════════════════════════════════════════════
    ████  MARKET PANEL — cross-chain volume + buys/sells  ████
+   Sources: DeFiLlama (volume) + GeckoTerminal (buys/sells)
    ══════════════════════════════════════════════════════════ */
 var _mktTime='1h';
 var _mktOpen=true;
-var _mktData={}; // {chainId: {vol5m,vol1h,vol6h,vol24h,buys1h,sells1h,chg24h,...}}
+var _mktData={}; // keyed by chain id
 var _mktTimer=null;
 
+// 4 chains only
 var MKT_CHAINS=[
-  {id:'solana',    label:'SOL',  icon:'◎'},
-  {id:'ethereum',  label:'ETH',  icon:'Ξ'},
-  {id:'bsc',       label:'BNB',  icon:'⬡'},
-  {id:'base',      label:'BASE', icon:'🔵'},
-  {id:'arbitrum',  label:'ARB',  icon:'🔷'},
-  {id:'polygon',   label:'POL',  icon:'⬟'},
-  {id:'avalanche', label:'AVAX', icon:'🔺'},
-  {id:'ton',       label:'TON',  icon:'💎'},
+  {id:'solana',   label:'SOL',  icon:'◎', llama:'solana',   gecko:'solana'},
+  {id:'ethereum', label:'ETH',  icon:'Ξ', llama:'ethereum',  gecko:'eth'},
+  {id:'bsc',      label:'BNB',  icon:'⬡', llama:'bsc',       gecko:'bsc'},
+  {id:'base',     label:'BASE', icon:'🔵', llama:'base',      gecko:'base'},
 ];
-
-// Rolling buy/sell buckets from pump.fun WS (Solana only, real-time)
-var _mktSolBuckets=[]; // [{t, buys, sells}] per-minute buckets
 
 function mktToggle(){
   _mktOpen=!_mktOpen;
@@ -2817,25 +2812,19 @@ function mktSetTime(t,btn){
 }
 
 function mktInit(){
-  // Open by default
   var body=document.getElementById('mkt-body');
   if(body)body.classList.add('open');
-  // Initial fetch
   mktFetch();
-  // Re-fetch every 30s
-  _mktTimer=setInterval(mktFetch,30000);
-  // Pipe SOL price to header
+  _mktTimer=setInterval(mktFetch,60000); // DeFiLlama updates ~1min
   mktSolPriceTick();
   setInterval(mktSolPriceTick,15000);
 }
 
 function mktSolPriceTick(){
-  // rdrSolUsd is already fetched by Radar; also works if Radar not visited
   if(rdrSolUsd){
     var el=document.getElementById('mkt-sol-price');
     if(el)el.textContent='$'+rdrSolUsd.toFixed(2);
   } else {
-    // Fallback fetch
     fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd')
       .then(function(r){return r.json()})
       .then(function(j){
@@ -2848,71 +2837,67 @@ function mktSolPriceTick(){
 }
 
 function mktFetch(){
-  // DexScreener /chains gives aggregate stats per chain
-  // We fetch top pairs per chain to build volume + buys/sells
-  var chains=MKT_CHAINS.map(function(c){return c.id;});
-  var promises=chains.map(function(chainId){
-    return fetch('https://api.dexscreener.com/latest/dex/tokens/'+_mktChainAddress(chainId))
-      .then(function(r){return r.ok?r.json():null})
-      .catch(function(){return null;});
-  });
-  // Also fetch overview from DexScreener search for each chain
-  var overviewPromises=chains.map(function(chainId){
-    return fetch('https://api.dexscreener.com/latest/dex/search?q='+chainId)
+  var el=document.getElementById('mkt-chains');
+  if(el&&!Object.keys(_mktData).length)el.innerHTML='<div class="mkt-loading">Fetching…</div>';
+
+  // ── SOURCE 1: DeFiLlama per-chain endpoint → accurate total DEX volume
+  // GET https://api.llama.fi/overview/dexs/{chain}
+  // Returns: {total24h, total7d, protocols:[...]}
+  var llamaPs=MKT_CHAINS.map(function(chain){
+    return fetch('https://api.llama.fi/overview/dexs/'+chain.llama+'?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true&dataType=dailyVolume')
       .then(function(r){return r.ok?r.json():null})
       .catch(function(){return null;});
   });
 
-  // Use the chain-specific boosted endpoint for real volume
-  Promise.all(MKT_CHAINS.map(function(chain){
-    return fetch('https://api.dexscreener.com/latest/dex/search?q='+encodeURIComponent(chain.label))
+  // ── SOURCE 2: GeckoTerminal top pools → h1/h6 volume + buys/sells tx counts
+  var geckoPs=MKT_CHAINS.map(function(chain){
+    return fetch('https://api.geckoterminal.com/api/v2/networks/'+chain.gecko+'/pools?page=1&sort=h24_volume_usd_desc')
       .then(function(r){return r.ok?r.json():null})
       .catch(function(){return null;});
-  })).then(function(results){
+  });
+
+  Promise.all(llamaPs.concat(geckoPs)).then(function(results){
+    var llamaResults=results.slice(0,MKT_CHAINS.length);
+    var geckoResults=results.slice(MKT_CHAINS.length);
+
     MKT_CHAINS.forEach(function(chain,i){
-      var j=results[i];
-      if(!j||!j.pairs)return;
-      // Filter pairs on this chain only
-      var pairs=j.pairs.filter(function(p){return p.chainId===chain.id;});
-      if(!pairs.length)return;
-      var vol5m=0,vol1h=0,vol6h=0,vol24h=0,buys1h=0,sells1h=0;
-      pairs.forEach(function(p){
-        var v=p.volume||{};
-        vol5m+=(v.m5||0);
-        vol1h+=(v.h1||0);
-        vol6h+=(v.h6||0);
-        vol24h+=(v.h24||0);
-        var txns=p.txns||{};
-        var t1=txns.h1||{};
-        buys1h+=(t1.buys||0);
-        sells1h+=(t1.sells||0);
+      var lj=llamaResults[i];
+      var gj=geckoResults[i];
+
+      // DeFiLlama: total24h = sum of all DEX volume on this chain in 24h
+      var llama24h=(lj&&(lj.total24h||lj.totalVolume24h))||0;
+
+      // GeckoTerminal: aggregate top 50 pools for h1/h6 volume + tx counts
+      var pools=(gj&&gj.data)||[];
+      var vol1h=0,vol6h=0,vol24h_gecko=0,buys=0,sells=0;
+      pools.slice(0,50).forEach(function(pool){
+        var attr=pool.attributes||{};
+        var v=attr.volume_usd||{};
+        vol1h+=(parseFloat(v.h1)||0);
+        vol6h+=(parseFloat(v.h6)||0);
+        vol24h_gecko+=(parseFloat(v.h24)||0);
+        var txns=attr.transactions||{};
+        var t1h=txns.h1||{};
+        buys+=(parseInt(t1h.buys)||0);
+        sells+=(parseInt(t1h.sells)||0);
       });
-      var priceChg=pairs[0]&&pairs[0].priceChange||{};
+
+      // Scale gecko h1/h6 up by llama/gecko ratio for more accurate sub-24h vol
+      var ratio=(llama24h&&vol24h_gecko)?llama24h/vol24h_gecko:1;
+      var scale=Math.min(ratio,10); // cap at 10x to avoid wild scaling
+
       _mktData[chain.id]={
-        vol5m:vol5m,vol1h:vol1h,vol6h:vol6h,vol24h:vol24h,
-        buys1h:buys1h,sells1h:sells1h,
-        chg1h:priceChg.h1||0,chg24h:priceChg.h24||0,
-        pairs:pairs.length,
+        vol1h:vol1h*scale,
+        vol6h:vol6h*scale,
+        vol24h:llama24h||vol24h_gecko,
+        buys:buys,
+        sells:sells,
         fetchedAt:Date.now()
       };
     });
+
     mktRender();
   });
-}
-
-function _mktChainAddress(chainId){
-  // Native token addresses for volume lookup (fallback)
-  var map={
-    solana:'So11111111111111111111111111111111111111112',
-    ethereum:'0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
-    bsc:'0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
-    base:'0x4200000000000000000000000000000000000006',
-    arbitrum:'0x82af49447d8a07e3bd95bd0d56f35241523fbab1',
-    polygon:'0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270',
-    avalanche:'0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7',
-    ton:'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c'
-  };
-  return map[chainId]||'';
 }
 
 function mktFmtVol(n){
@@ -2934,24 +2919,27 @@ function mktRender(){
   var totEl=document.getElementById('mkt-totals');
   if(!el)return;
 
+  // Volume key: 5m not available from llama/gecko — fall back to 1h
   var volKey={
-    '5m':'vol5m','1h':'vol1h','6h':'vol6h','24h':'vol24h'
+    '5m':'vol1h','1h':'vol1h','6h':'vol6h','24h':'vol24h'
   }[_mktTime]||'vol1h';
-
-  var chgKey=(_mktTime==='5m'||_mktTime==='1h')?'chg1h':'chg24h';
 
   var rows=MKT_CHAINS.map(function(chain){
     var d=_mktData[chain.id]||{};
-    return {chain:chain,vol:d[volKey]||0,buys:d.buys1h||0,sells:d.sells1h||0,chg:d[chgKey]||0,pairs:d.pairs||0};
+    return {chain:chain,vol:d[volKey]||0,buys:d.buys||0,sells:d.sells||0};
   }).sort(function(a,b){return b.vol-a.vol});
 
   var totalVol=rows.reduce(function(s,r){return s+r.vol;},0);
   var totalBuys=rows.reduce(function(s,r){return s+r.buys;},0);
   var totalSells=rows.reduce(function(s,r){return s+r.sells;},0);
+  var hasAny=Object.keys(_mktData).length>0;
+
+  if(!hasAny){
+    el.innerHTML='<div class="mkt-loading">Fetching…</div>';
+    return;
+  }
 
   el.innerHTML=rows.map(function(r){
-    var chgClass=r.chg>0?'up':r.chg<0?'dn':'';
-    var chgStr=r.chg?((r.chg>0?'+':'')+r.chg.toFixed(1)+'%'):'—';
     var buyPct=r.buys+r.sells>0?Math.round(r.buys/(r.buys+r.sells)*100):50;
     var bsBar='';
     if(r.buys||r.sells){
@@ -2964,19 +2952,23 @@ function mktRender(){
         +'<span style="color:#FF6B6B">S '+mktFmtCount(r.sells)+'</span>'
         +'</div>';
     }
+    var volLabel=r.vol?mktFmtVol(r.vol):'—';
+    // Show time label next to vol
+    var tLabel=_mktTime==='5m'?'1h':_mktTime; // 5m falls back to 1h data
     return '<div class="mkt-chain-row">'
       +'<span class="mkt-chain-icon">'+r.chain.icon+'</span>'
       +'<span class="mkt-chain-name">'+r.chain.label+'</span>'
-      +'<span class="mkt-chain-vol">'+mktFmtVol(r.vol)+'</span>'
-      +'<span class="mkt-chain-chg '+chgClass+'">'+chgStr+'</span>'
+      +'<span class="mkt-chain-vol">'+volLabel+'</span>'
+      +'<span class="mkt-chain-chg" style="color:#6B7280;font-size:9px">'+tLabel+'</span>'
       +'</div>'
       +bsBar;
   }).join('');
 
   if(totEl){
     totEl.innerHTML='<span>Total: '+mktFmtVol(totalVol)+'</span>'
-      +'<span style="color:#00E676">B '+mktFmtCount(totalBuys)+'</span>'
-      +'<span style="color:#FF6B6B">S '+mktFmtCount(totalSells)+'</span>';
+      +(totalBuys||totalSells?
+        '<span style="color:#00E676">B '+mktFmtCount(totalBuys)+'</span>'
+        +'<span style="color:#FF6B6B">S '+mktFmtCount(totalSells)+'</span>':'');
   }
 }
 
