@@ -3261,67 +3261,6 @@ VIEWS.images=function(){
 function saveImage(){var id=newId();save('images',id,{label:document.getElementById('img_label').value,key:document.getElementById('img_key').value,url:document.getElementById('img_url').value,notes:document.getElementById('img_notes').value});toast('Image saved')}
 function removeImage(id){if(confirm('Delete?'))remove('images',id)}
 
-/* ══ MARKET PANEL DRAG ══ */
-(function(){
-  var el=document.getElementById('mkt-panel');
-  var hdr=document.getElementById('mkt-drag-handle');
-  if(!el||!hdr)return;
-  var dx=0,dy=0,mx=0,my=0,dragging=false;
-
-  // Restore saved position
-  try{
-    var saved=JSON.parse(localStorage.getItem('tr_mkt_pos')||'{}');
-    if(saved.left!==undefined)el.style.left=saved.left+'px';
-    if(saved.top!==undefined)el.style.top=saved.top+'px';
-  }catch(e){}
-
-  hdr.addEventListener('mousedown',function(e){
-    if(e.button!==0)return;
-    dragging=true;
-    var rect=el.getBoundingClientRect();
-    dx=e.clientX-rect.left;
-    dy=e.clientY-rect.top;
-    el.classList.add('dragging');
-    e.preventDefault();
-  });
-  document.addEventListener('mousemove',function(e){
-    if(!dragging)return;
-    var nx=e.clientX-dx;
-    var ny=e.clientY-dy;
-    nx=Math.max(0,Math.min(window.innerWidth-el.offsetWidth,nx));
-    ny=Math.max(0,Math.min(window.innerHeight-el.offsetHeight,ny));
-    el.style.left=nx+'px';
-    el.style.top=ny+'px';
-  });
-  document.addEventListener('mouseup',function(){
-    if(!dragging)return;
-    dragging=false;
-    el.classList.remove('dragging');
-    try{localStorage.setItem('tr_mkt_pos',JSON.stringify({left:parseInt(el.style.left),top:parseInt(el.style.top)}))}catch(e){}
-  });
-
-  // Touch support
-  hdr.addEventListener('touchstart',function(e){
-    var t=e.touches[0];
-    dragging=true;
-    var rect=el.getBoundingClientRect();
-    dx=t.clientX-rect.left;dy=t.clientY-rect.top;
-    el.classList.add('dragging');
-  },{passive:true});
-  document.addEventListener('touchmove',function(e){
-    if(!dragging)return;
-    var t=e.touches[0];
-    var nx=t.clientX-dx,ny=t.clientY-dy;
-    nx=Math.max(0,Math.min(window.innerWidth-el.offsetWidth,nx));
-    ny=Math.max(0,Math.min(window.innerHeight-el.offsetHeight,ny));
-    el.style.left=nx+'px';el.style.top=ny+'px';
-  },{passive:true});
-  document.addEventListener('touchend',function(){
-    if(!dragging)return;
-    dragging=false;el.classList.remove('dragging');
-    try{localStorage.setItem('tr_mkt_pos',JSON.stringify({left:parseInt(el.style.left),top:parseInt(el.style.top)}))}catch(e){}
-  });
-})();
 
 </script>
 
@@ -3345,6 +3284,75 @@ function removeImage(id){if(confirm('Delete?'))remove('images',id)}
     <div class="mkt-totals" id="mkt-totals"></div>
   </div>
 </div>
+
+<script>
+/* ══ MARKET PANEL DRAG — runs after widget HTML exists ══ */
+(function(){
+  var el=document.getElementById('mkt-panel');
+  var hdr=document.getElementById('mkt-drag-handle');
+  if(!el||!hdr)return;
+  var dx=0,dy=0,dragging=false;
+
+  // Restore saved position
+  try{
+    var saved=JSON.parse(localStorage.getItem('tr_mkt_pos')||'{}');
+    if(saved.left!=null)el.style.left=saved.left+'px';
+    if(saved.top!=null)el.style.top=saved.top+'px';
+  }catch(e){}
+
+  function savePos(){
+    try{localStorage.setItem('tr_mkt_pos',JSON.stringify({left:parseInt(el.style.left)||0,top:parseInt(el.style.top)||0}));}catch(e){}
+  }
+  function clamp(nx,ny){
+    nx=Math.max(0,Math.min(window.innerWidth-el.offsetWidth,nx));
+    ny=Math.max(0,Math.min(window.innerHeight-40,ny));
+    el.style.left=nx+'px';
+    el.style.top=ny+'px';
+  }
+
+  // Mouse
+  hdr.addEventListener('mousedown',function(e){
+    if(e.button!==0)return;
+    var rect=el.getBoundingClientRect();
+    dx=e.clientX-rect.left;
+    dy=e.clientY-rect.top;
+    dragging=true;
+    el.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!dragging)return;
+    clamp(e.clientX-dx, e.clientY-dy);
+  });
+  document.addEventListener('mouseup',function(){
+    if(!dragging)return;
+    dragging=false;
+    el.classList.remove('dragging');
+    savePos();
+  });
+
+  // Touch
+  hdr.addEventListener('touchstart',function(e){
+    var t=e.touches[0];
+    var rect=el.getBoundingClientRect();
+    dx=t.clientX-rect.left;
+    dy=t.clientY-rect.top;
+    dragging=true;
+    el.classList.add('dragging');
+  },{passive:true});
+  document.addEventListener('touchmove',function(e){
+    if(!dragging)return;
+    var t=e.touches[0];
+    clamp(t.clientX-dx, t.clientY-dy);
+  },{passive:true});
+  document.addEventListener('touchend',function(){
+    if(!dragging)return;
+    dragging=false;
+    el.classList.remove('dragging');
+    savePos();
+  });
+})();
+</script>
 
 </body>
 </html>
