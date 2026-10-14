@@ -98,32 +98,62 @@ a{color:inherit}
 /* Status line */
 .psb-status{padding:6px 14px;font-size:10px;color:#6B7280;font-family:var(--mono);border-top:1px solid #1C1E26;margin-top:auto}
 
-/* ── MARKET PANEL ── */
-.mkt-panel{border-top:1px solid #1C1E26;padding:0}
-.mkt-header{display:flex;align-items:center;gap:6px;padding:8px 12px;cursor:pointer;user-select:none}
-.mkt-header:hover{background:rgba(255,255,255,.04)}
-.mkt-title{font-size:11px;font-weight:700;color:#A0A8B8;letter-spacing:.8px;text-transform:uppercase;flex:1}
+/* ── MARKET PANEL — floating glass widget ── */
+@keyframes mktFlashUp{0%{background:rgba(0,230,118,.38);box-shadow:0 0 18px rgba(0,230,118,.5)}60%{background:rgba(0,230,118,.12)}100%{background:transparent}}
+@keyframes mktFlashDn{0%{background:rgba(255,68,68,.38);box-shadow:0 0 18px rgba(255,68,68,.5)}60%{background:rgba(255,68,68,.12)}100%{background:transparent}}
+@keyframes mktFlashSOL{0%{background:rgba(153,69,255,.45);box-shadow:0 0 22px rgba(153,69,255,.6)}60%{background:rgba(153,69,255,.15)}100%{background:transparent}}
+@keyframes mktFlashETH{0%{background:rgba(98,126,234,.45);box-shadow:0 0 22px rgba(98,126,234,.6)}60%{background:rgba(98,126,234,.15)}100%{background:transparent}}
+@keyframes mktFlashBNB{0%{background:rgba(240,185,11,.45);box-shadow:0 0 22px rgba(240,185,11,.6)}60%{background:rgba(240,185,11,.15)}100%{background:transparent}}
+@keyframes mktFlashBASE{0%{background:rgba(0,114,255,.45);box-shadow:0 0 22px rgba(0,114,255,.6)}60%{background:rgba(0,114,255,.15)}100%{background:transparent}}
+.mkt-row-flash-SOL{animation:mktFlashSOL .9s ease-out}
+.mkt-row-flash-ETH{animation:mktFlashETH .9s ease-out}
+.mkt-row-flash-BNB{animation:mktFlashBNB .9s ease-out}
+.mkt-row-flash-BASE{animation:mktFlashBASE .9s ease-out}
+.mkt-row-flash-up{animation:mktFlashUp .7s ease-out}
+.mkt-row-flash-dn{animation:mktFlashDn .7s ease-out}
+
+.mkt-panel{
+  position:fixed;
+  top:16px;left:16px;
+  z-index:9999;
+  width:230px;
+  background:rgba(12,12,18,.05);
+  backdrop-filter:blur(18px) saturate(180%);
+  -webkit-backdrop-filter:blur(18px) saturate(180%);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:14px;
+  box-shadow:0 8px 32px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.07);
+  cursor:default;
+  user-select:none;
+  transition:box-shadow .2s;
+}
+.mkt-panel:hover{box-shadow:0 12px 40px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1)}
+.mkt-panel.dragging{box-shadow:0 20px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12);opacity:.95}
+.mkt-header{display:flex;align-items:center;gap:6px;padding:10px 12px 8px;cursor:grab;border-radius:14px 14px 0 0}
+.mkt-header:active{cursor:grabbing}
+.mkt-header:hover{background:rgba(255,255,255,.03);border-radius:14px 14px 0 0}
+.mkt-title{font-size:10px;font-weight:700;color:#A0A8B8;letter-spacing:.9px;text-transform:uppercase;flex:1}
 .mkt-sol{font-family:var(--mono);font-size:11px;color:#00E676;font-weight:600}
-.mkt-caret{font-size:11px;color:#6B7280;transition:transform .2s}
+.mkt-caret{font-size:10px;color:#6B7280;transition:transform .2s;margin-left:2px}
 .mkt-caret.up{transform:rotate(-90deg)}
-.mkt-body{display:none;padding:0 0 6px}
+.mkt-body{display:none;padding:0 0 8px;border-top:1px solid rgba(255,255,255,.06)}
 .mkt-body.open{display:block}
-.mkt-tabs{display:flex;gap:0;padding:4px 10px 6px;border-bottom:1px solid #1C1E26}
-.mkt-tab{flex:1;padding:3px 0;border:none;background:transparent;color:#6B7280;font-size:10px;font-family:var(--mono);font-weight:600;cursor:pointer;border-radius:3px;transition:all .12s}
-.mkt-tab.active{background:rgba(209,15,34,.18);color:#fff}
-.mkt-chains{padding:4px 0}
-.mkt-chain-row{display:grid;grid-template-columns:28px 1fr auto auto;align-items:center;gap:4px;padding:4px 10px;border-radius:3px;transition:background .1s}
-.mkt-chain-row:hover{background:rgba(255,255,255,.03)}
+.mkt-tabs{display:flex;gap:0;padding:6px 10px 5px}
+.mkt-tab{flex:1;padding:3px 0;border:none;background:transparent;color:#6B7280;font-size:10px;font-family:var(--mono);font-weight:600;cursor:pointer;border-radius:4px;transition:all .12s}
+.mkt-tab.active{background:rgba(209,15,34,.22);color:#fff}
+.mkt-chains{padding:2px 0}
+.mkt-chain-row{display:grid;grid-template-columns:26px 1fr auto auto;align-items:center;gap:4px;padding:5px 10px;border-radius:6px;transition:background .12s;margin:0 4px}
+.mkt-chain-row:hover{background:rgba(255,255,255,.04)}
 .mkt-chain-icon{font-size:13px;text-align:center}
-.mkt-chain-name{font-size:11px;color:#A0A8B8;font-weight:600}
+.mkt-chain-name{font-size:11px;color:#C0C8D8;font-weight:600}
 .mkt-chain-vol{font-family:var(--mono);font-size:10px;color:#E8EAF0;text-align:right}
-.mkt-chain-chg{font-family:var(--mono);font-size:10px;text-align:right;min-width:44px}
+.mkt-chain-chg{font-family:var(--mono);font-size:9px;text-align:right;min-width:28px;color:#6B7280}
 .mkt-chain-chg.up{color:#00E676}
 .mkt-chain-chg.dn{color:#FF4444}
 .mkt-bs-row{display:flex;gap:3px;padding:0 10px 2px;grid-column:1/-1}
 .mkt-buy{font-size:9px;font-family:var(--mono);color:#00E676}
 .mkt-sell{font-size:9px;font-family:var(--mono);color:#FF6B6B}
-.mkt-totals{padding:6px 10px 2px;border-top:1px solid #1C1E26;display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:#6B7280}
+.mkt-totals{padding:5px 10px 2px;border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:#6B7280;margin:0 4px}
 .mkt-loading{padding:12px 10px;font-size:10px;color:#6B7280;font-family:var(--mono)}
 /* Feed area */
 .pulse-feed-area{flex:1;min-width:0;overflow-y:auto}
@@ -403,10 +433,11 @@ html[data-theme="tokyonight"] .pulse-item{border-bottom-color:#2a2b3d}
 html[data-theme="tokyonight"] .pulse-box,
 html[data-theme="tokyonight"] .rdr-panel{background:#16213e;border-color:#2a2b3d}
 html[data-theme="tokyonight"] .psb-btn.active{background:rgba(255,0,124,.15);border-left-color:#ff007c}
-html[data-theme="tokyonight"] .mkt-panel{border-top-color:#2a2b3d}
-html[data-theme="tokyonight"] .mkt-tab.active{background:rgba(255,0,124,.2);color:#ff007c}
-html[data-theme="tokyonight"] .mkt-tabs{border-bottom-color:#2a2b3d}
-html[data-theme="tokyonight"] .mkt-totals{border-top-color:#2a2b3d}
+html[data-theme="tokyonight"] .mkt-panel{background:rgba(15,15,28,.05);border-color:rgba(122,162,247,.18)}
+html[data-theme="tokyonight"] .mkt-tab.active{background:rgba(255,0,124,.22);color:#ff007c}
+html[data-theme="tokyonight"] .mkt-body{border-top-color:rgba(122,162,247,.1)}
+html[data-theme="tokyonight"] .mkt-tabs{border-bottom-color:rgba(122,162,247,.1)}
+html[data-theme="tokyonight"] .mkt-totals{border-top-color:rgba(122,162,247,.1)}
 
 /* ── RED-BLACK-WHITE mode ── */
 html[data-theme="rbw"]{
@@ -683,30 +714,7 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
     <div class="psb-divider"></div>
     <button class="psb-bin-btn" onclick="switchTab('bin')">🗑 BIN <span class="psb-bin-count" id="psb-bin-count" style="display:none"></span></button>
 
-    <!-- ── MARKET PANEL ── -->
-    <div class="psb-divider"></div>
-    <div class="mkt-panel" id="mkt-panel">
-      <div class="mkt-header" onclick="mktToggle()">
-        <span class="mkt-title">📊 Market</span>
-        <span class="mkt-sol" id="mkt-sol-price">—</span>
-        <span class="mkt-caret" id="mkt-caret">▾</span>
-      </div>
-      <div class="mkt-body" id="mkt-body">
-        <!-- time tabs -->
-        <div class="mkt-tabs">
-          <button class="mkt-tab active" onclick="mktSetTime('5m',this)">5m</button>
-          <button class="mkt-tab" onclick="mktSetTime('1h',this)">1h</button>
-          <button class="mkt-tab" onclick="mktSetTime('6h',this)">6h</button>
-          <button class="mkt-tab" onclick="mktSetTime('24h',this)">24h</button>
-        </div>
-        <!-- chain rows -->
-        <div class="mkt-chains" id="mkt-chains">
-          <div class="mkt-loading">Fetching chains…</div>
-        </div>
-        <!-- totals -->
-        <div class="mkt-totals" id="mkt-totals"></div>
-      </div>
-    </div>
+    <!-- market panel moved to floating widget -->
 
     <!-- Status -->
     <div class="psb-status" id="pulse-status">Loading…</div>
@@ -2800,7 +2808,7 @@ function mktToggle(){
   _mktOpen=!_mktOpen;
   var body=document.getElementById('mkt-body');
   var caret=document.getElementById('mkt-caret');
-  if(body)body.classList.toggle('open',_mktOpen);
+  if(body){body.style.display=_mktOpen?'block':'none';}
   if(caret)caret.classList.toggle('up',!_mktOpen);
 }
 
@@ -2812,8 +2820,8 @@ function mktSetTime(t,btn){
 }
 
 function mktInit(){
-  var body=document.getElementById('mkt-body');
-  if(body)body.classList.add('open');
+  // body starts open via HTML class; sync _mktOpen state
+  _mktOpen=true;
   mktFetch();
   _mktTimer=setInterval(mktFetch,60000); // DeFiLlama updates ~1min
   mktSolPriceTick();
@@ -2914,12 +2922,15 @@ function mktFmtCount(n){
   return String(n);
 }
 
+// Track previous volume leader per timeframe to detect shifts
+var _mktLeader={}; // {volKey: chainId}
+var _mktPrevVols={}; // {chainId: vol} — detect per-chain spikes
+
 function mktRender(){
   var el=document.getElementById('mkt-chains');
   var totEl=document.getElementById('mkt-totals');
   if(!el)return;
 
-  // Volume key: 5m not available from llama/gecko — fall back to 1h
   var volKey={
     '5m':'vol1h','1h':'vol1h','6h':'vol6h','24h':'vol24h'
   }[_mktTime]||'vol1h';
@@ -2939,27 +2950,48 @@ function mktRender(){
     return;
   }
 
+  // Detect new volume leader
+  var newLeader=rows[0]&&rows[0].vol>0?rows[0].chain.id:null;
+  var leaderChanged=newLeader&&_mktLeader[volKey]&&_mktLeader[volKey]!==newLeader;
+  _mktLeader[volKey]=newLeader;
+
+  // Detect per-chain volume spikes (>15% jump)
+  var flashChains={};
+  rows.forEach(function(r){
+    var prev=_mktPrevVols[r.chain.id]||0;
+    if(prev>0&&r.vol>0){
+      var chg=(r.vol-prev)/prev;
+      if(chg>0.15)flashChains[r.chain.id]='up';
+      else if(chg<-0.15)flashChains[r.chain.id]='dn';
+    }
+    _mktPrevVols[r.chain.id]=r.vol;
+  });
+
+  var tLabel=_mktTime==='5m'?'1h':_mktTime;
+
   el.innerHTML=rows.map(function(r){
     var buyPct=r.buys+r.sells>0?Math.round(r.buys/(r.buys+r.sells)*100):50;
     var bsBar='';
     if(r.buys||r.sells){
-      bsBar='<div style="display:flex;gap:1px;padding:0 10px 3px 42px">'
+      bsBar='<div style="display:flex;gap:1px;padding:0 8px 2px 40px">'
         +'<div style="height:3px;border-radius:2px 0 0 2px;background:#00E676;width:'+buyPct+'%;min-width:2px"></div>'
         +'<div style="height:3px;border-radius:0 2px 2px 0;background:#FF4444;flex:1;min-width:2px"></div>'
         +'</div>'
-        +'<div style="display:flex;gap:8px;padding:0 10px 4px 42px;font-size:9px;font-family:var(--mono)">'
+        +'<div style="display:flex;gap:8px;padding:0 10px 3px 40px;font-size:9px;font-family:var(--mono)">'
         +'<span style="color:#00E676">B '+mktFmtCount(r.buys)+'</span>'
         +'<span style="color:#FF6B6B">S '+mktFmtCount(r.sells)+'</span>'
         +'</div>';
     }
     var volLabel=r.vol?mktFmtVol(r.vol):'—';
-    // Show time label next to vol
-    var tLabel=_mktTime==='5m'?'1h':_mktTime; // 5m falls back to 1h data
-    return '<div class="mkt-chain-row">'
+    // Flash class: leader shift = chain colour flash; spike = up/dn flash
+    var flashCls='';
+    if(leaderChanged&&r.chain.id===newLeader)flashCls='mkt-row-flash-'+r.chain.label;
+    else if(flashChains[r.chain.id])flashCls='mkt-row-flash-'+flashChains[r.chain.id];
+    return '<div class="mkt-chain-row '+flashCls+'" id="mkt-row-'+r.chain.id+'">'
       +'<span class="mkt-chain-icon">'+r.chain.icon+'</span>'
       +'<span class="mkt-chain-name">'+r.chain.label+'</span>'
       +'<span class="mkt-chain-vol">'+volLabel+'</span>'
-      +'<span class="mkt-chain-chg" style="color:#6B7280;font-size:9px">'+tLabel+'</span>'
+      +'<span class="mkt-chain-chg">'+tLabel+'</span>'
       +'</div>'
       +bsBar;
   }).join('');
@@ -3229,6 +3261,90 @@ VIEWS.images=function(){
 function saveImage(){var id=newId();save('images',id,{label:document.getElementById('img_label').value,key:document.getElementById('img_key').value,url:document.getElementById('img_url').value,notes:document.getElementById('img_notes').value});toast('Image saved')}
 function removeImage(id){if(confirm('Delete?'))remove('images',id)}
 
+/* ══ MARKET PANEL DRAG ══ */
+(function(){
+  var el=document.getElementById('mkt-panel');
+  var hdr=document.getElementById('mkt-drag-handle');
+  if(!el||!hdr)return;
+  var dx=0,dy=0,mx=0,my=0,dragging=false;
+
+  // Restore saved position
+  try{
+    var saved=JSON.parse(localStorage.getItem('tr_mkt_pos')||'{}');
+    if(saved.left!==undefined)el.style.left=saved.left+'px';
+    if(saved.top!==undefined)el.style.top=saved.top+'px';
+  }catch(e){}
+
+  hdr.addEventListener('mousedown',function(e){
+    if(e.button!==0)return;
+    dragging=true;
+    var rect=el.getBoundingClientRect();
+    dx=e.clientX-rect.left;
+    dy=e.clientY-rect.top;
+    el.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!dragging)return;
+    var nx=e.clientX-dx;
+    var ny=e.clientY-dy;
+    nx=Math.max(0,Math.min(window.innerWidth-el.offsetWidth,nx));
+    ny=Math.max(0,Math.min(window.innerHeight-el.offsetHeight,ny));
+    el.style.left=nx+'px';
+    el.style.top=ny+'px';
+  });
+  document.addEventListener('mouseup',function(){
+    if(!dragging)return;
+    dragging=false;
+    el.classList.remove('dragging');
+    try{localStorage.setItem('tr_mkt_pos',JSON.stringify({left:parseInt(el.style.left),top:parseInt(el.style.top)}))}catch(e){}
+  });
+
+  // Touch support
+  hdr.addEventListener('touchstart',function(e){
+    var t=e.touches[0];
+    dragging=true;
+    var rect=el.getBoundingClientRect();
+    dx=t.clientX-rect.left;dy=t.clientY-rect.top;
+    el.classList.add('dragging');
+  },{passive:true});
+  document.addEventListener('touchmove',function(e){
+    if(!dragging)return;
+    var t=e.touches[0];
+    var nx=t.clientX-dx,ny=t.clientY-dy;
+    nx=Math.max(0,Math.min(window.innerWidth-el.offsetWidth,nx));
+    ny=Math.max(0,Math.min(window.innerHeight-el.offsetHeight,ny));
+    el.style.left=nx+'px';el.style.top=ny+'px';
+  },{passive:true});
+  document.addEventListener('touchend',function(){
+    if(!dragging)return;
+    dragging=false;el.classList.remove('dragging');
+    try{localStorage.setItem('tr_mkt_pos',JSON.stringify({left:parseInt(el.style.left),top:parseInt(el.style.top)}))}catch(e){}
+  });
+})();
+
 </script>
+
+<!-- ══ FLOATING MARKET WIDGET ══ -->
+<div class="mkt-panel" id="mkt-panel">
+  <div class="mkt-header" id="mkt-drag-handle">
+    <span class="mkt-title">📊 Market</span>
+    <span class="mkt-sol" id="mkt-sol-price">—</span>
+    <span class="mkt-caret" id="mkt-caret" onclick="mktToggle();event.stopPropagation()">▾</span>
+  </div>
+  <div class="mkt-body open" id="mkt-body">
+    <div class="mkt-tabs">
+      <button class="mkt-tab active" onclick="mktSetTime('5m',this)">5m</button>
+      <button class="mkt-tab" onclick="mktSetTime('1h',this)">1h</button>
+      <button class="mkt-tab" onclick="mktSetTime('6h',this)">6h</button>
+      <button class="mkt-tab" onclick="mktSetTime('24h',this)">24h</button>
+    </div>
+    <div class="mkt-chains" id="mkt-chains">
+      <div class="mkt-loading">Fetching…</div>
+    </div>
+    <div class="mkt-totals" id="mkt-totals"></div>
+  </div>
+</div>
+
 </body>
 </html>
