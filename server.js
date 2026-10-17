@@ -57,60 +57,49 @@ function getAttr(block, tag, attr) {
 
 async function fetchReddit() {
   const subs = ['popular','technology','worldnews','programming','business'];
-  // Stagger requests to avoid rate-limit; use old.reddit JSON which is more server-friendly
   const delay = ms => new Promise(res => setTimeout(res, ms));
-  const jsonResults = [];
+  const items = [];
+
+  // Try Pullpush.io — community Reddit mirror, works from datacenter IPs, has upvote scores
+  const since = Math.floor((Date.now() - H48) / 1000);
+  let pullpushWorked = false;
   for (let i = 0; i < subs.length; i++) {
-    if (i > 0) await delay(800);
+    if (i > 0) await delay(500);
     const sub = subs[i];
     try {
-      const r = await fetch(`https://www.reddit.com/r/${sub}.json?limit=25&raw_json=1&t=day`, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; TokyoRadar/1.0; +https://github.com)',
-          'Accept': 'application/json',
-          'Accept-Language': 'en-US,en;q=0.9',
-        },
-        redirect: 'follow'
-      });
+      const r = await fetch(
+        `https://api.pullpush.io/reddit/search/submission/?subreddit=${sub}&size=25&sort=score&order=desc&after=${since}`,
+        { headers: { 'User-Agent': 'TokyoRadar/1.0', 'Accept': 'application/json' }, redirect: 'follow' }
+      );
       if (!r.ok) throw new Error(r.status);
-      jsonResults.push({ status: 'fulfilled', value: await r.json() });
+      const j = await r.json();
+      const posts = j.data || [];
+      if (!posts.length) continue;
+      pullpushWorked = true;
+      for (const p of posts) {
+        if (!p.title) continue;
+        const ups = p.score || 0;
+        const comments = p.num_comments || 0;
+        const seenAt = p.created_utc ? p.created_utc * 1000 : Date.now();
+        const upsFmt = ups >= 1000 ? (ups/1000).toFixed(1)+'k' : String(ups);
+        const url = p.url?.startsWith('http') ? p.url : `https://www.reddit.com${p.permalink}`;
+        items.push({
+          platform: 'Reddit',
+          title: p.title,
+          meta: `r/${p.subreddit||sub} · ${upsFmt} ups · ${comments} comments`,
+          url,
+          tags: ['reddit'],
+          score: ups + comments * 2,
+          seenAt,
+          lastSeen: Date.now()
+        });
+      }
     } catch(e) {
-      jsonResults.push({ status: 'rejected', reason: e.message });
+      console.log(`Pullpush failed for r/${sub}:`, e.message);
     }
   }
 
-  const items = [];
-  let jsonWorked = false;
-
-  for (let si = 0; si < jsonResults.length; si++) {
-    const r = jsonResults[si];
-    if (r.status !== 'fulfilled') continue;
-    const posts = r.value?.data?.children || [];
-    if (!posts.length) continue;
-    jsonWorked = true;
-    for (const child of posts) {
-      const p = child.data;
-      if (!p || !p.title) continue;
-      const sub = p.subreddit || subs[si];
-      const ups = p.ups || p.score || 0;
-      const comments = p.num_comments || 0;
-      const seenAt = p.created_utc ? p.created_utc * 1000 : Date.now();
-      const upsFmt = ups >= 1000 ? (ups/1000).toFixed(1)+'k' : String(ups);
-      const url = (p.url||'').startsWith('http') ? p.url : `https://www.reddit.com${p.permalink}`;
-      items.push({
-        platform: 'Reddit',
-        title: p.title,
-        meta: `r/${sub} · ${upsFmt} ups · ${comments} comments`,
-        url,
-        tags: ['reddit'],
-        score: ups + comments * 2,
-        seenAt,
-        lastSeen: Date.now()
-      });
-    }
-  }
-
-  if (jsonWorked) return items.filter(i => Date.now() - i.seenAt <= H48);
+  if (pullpushWorked) return items.filter(i => Date.now() - i.seenAt <= H48);
 
   // Fallback: RSS (no upvote counts but reliable)
   console.log('Reddit JSON failed, falling back to RSS');
