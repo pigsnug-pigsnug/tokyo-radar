@@ -1122,7 +1122,11 @@ function switchTab(t){
 var _theme='light';
 function setTheme(t){
   _theme=t;
-  document.documentElement.setAttribute('data-theme',t);
+  if(t==='light'){
+    document.documentElement.removeAttribute('data-theme'); // light = default CSS vars
+  } else {
+    document.documentElement.setAttribute('data-theme',t);
+  }
   try{localStorage.setItem('tr_theme',t);}catch(e){}
   document.querySelectorAll('.th-btn').forEach(function(b){b.classList.remove('active')});
   var btn=document.getElementById('th-'+t);
@@ -1354,13 +1358,37 @@ function buildMultiSignalMap(items){
   return map;
 }
 var _multiMap={};
+// Platform → short symbol
+var _platIcon={'Reddit':'👽','X Trends':'𝕏','TikTok':'♪','Hacker News':'Y','Google Trends':'⌖','Al Jazeera':'AJ','Dev.to':'{}','YouTube':'▶'};
+function platIcon(p){return _platIcon[p]||p.slice(0,2);}
+
+function getMultiPlatforms(title){
+  // Return Set of platforms this title appears on (from live map)
+  var words=title.toLowerCase().replace(/[^\w\s]/g,' ').split(/\s+/).filter(function(w){return w.length>4;});
+  var plats=new Set();
+  words.forEach(function(w){
+    if(_multiMap[w])_multiMap[w].platforms.forEach(function(p){plats.add(p);});
+  });
+  return plats;
+}
 function isMultiSignal(title,platform){
-  // Check persistent store first
   var k=((platform||'')+'::'+title).toLowerCase();
   if(_multiDetected[k])return true;
-  // Also check live map
-  var words=title.toLowerCase().replace(/[^\w\s]/g,' ').split(/\s+/).filter(function(w){return w.length>4;});
-  return words.some(function(w){return _multiMap[w]&&_multiMap[w].platforms.size>=3;});
+  return getMultiPlatforms(title).size>=3;
+}
+function multiSignalTag(title,platform){
+  var plats=getMultiPlatforms(title);
+  if(plats.size<2){
+    // Check persisted
+    var k=((platform||'')+'::'+title).toLowerCase();
+    if(!_multiDetected[k])return '';
+  }
+  // Build icon row — current platform first, then others
+  var icons=[];
+  if(plats.has(platform))icons.push(platIcon(platform));
+  plats.forEach(function(p){if(p!==platform)icons.push(platIcon(p));});
+  if(!icons.length)icons=['⚡'];
+  return '<span class="multi-badge" title="Spotted on '+Array.from(plats).join(', ')+'">'+icons.join(' ')+'</span>';
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1485,7 +1513,7 @@ function multiRender(){
     var d=new Date(_multiDetected[k]);
     var when=d.toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',month:'short',day:'numeric'})+' '+d.toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true});
     return '<div class="pulse-item">'+pulseBadge(platform)+'<div class="pulse-item-body">'+
-      '<div class="pulse-item-title">'+(url?'<a href="'+escHtml(url)+'" target="_blank" rel="noopener">'+escHtml(title)+'</a>':escHtml(title))+'<span class="multi-badge">⚡ Multi</span></div>'+
+      '<div class="pulse-item-title">'+(url?'<a href="'+escHtml(url)+'" target="_blank" rel="noopener">'+escHtml(title)+'</a>':escHtml(title))+multiSignalTag(title,platform)+'</div>'+
       '<div class="pulse-item-meta">'+(meta?escHtml(meta)+'&nbsp;·&nbsp;':'')+'first seen '+when+'</div>'+
     '</div></div>';
   }).join('');
@@ -1860,8 +1888,7 @@ function pulseItemHtml(i,q){
   var ago=i.seenAt?Math.round((Date.now()-i.seenAt)/60000)+'m ago':'';
   var viral=isViral(i);
   var viralTag=viral?'<span class="viral-badge">🔥 VIRAL</span>':'';
-  var multi=isMultiSignal(i.title,i.platform);
-  var multiTag=multi?'<span class="multi-badge">⚡ MULTI</span>':'';
+  var multiTag=multiSignalTag(i.title,i.platform);
   var velTag='';
   if(i.velocity>2)velTag='<span class="vel-up">🔺🔺</span>';
   else if(i.velocity>0)velTag='<span class="vel-up">🔺</span>';

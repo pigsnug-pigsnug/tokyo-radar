@@ -57,18 +57,27 @@ function getAttr(block, tag, attr) {
 
 async function fetchReddit() {
   const subs = ['popular','technology','worldnews','programming','business'];
-  // Try JSON API first (has upvotes/comments), fall back to RSS
-  const jsonResults = await Promise.allSettled(subs.map(sub =>
-    fetch(`https://www.reddit.com/r/${sub}.json?limit=25&raw_json=1`, {
-      headers: {
-        'User-Agent': CHROME_UA,
-        'Accept': 'application/json',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cache-Control': 'no-cache'
-      },
-      redirect: 'follow'
-    }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-  ));
+  // Stagger requests to avoid rate-limit; use old.reddit JSON which is more server-friendly
+  const delay = ms => new Promise(res => setTimeout(res, ms));
+  const jsonResults = [];
+  for (let i = 0; i < subs.length; i++) {
+    if (i > 0) await delay(800);
+    const sub = subs[i];
+    try {
+      const r = await fetch(`https://www.reddit.com/r/${sub}.json?limit=25&raw_json=1&t=day`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; TokyoRadar/1.0; +https://github.com)',
+          'Accept': 'application/json',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+        redirect: 'follow'
+      });
+      if (!r.ok) throw new Error(r.status);
+      jsonResults.push({ status: 'fulfilled', value: await r.json() });
+    } catch(e) {
+      jsonResults.push({ status: 'rejected', reason: e.message });
+    }
+  }
 
   const items = [];
   let jsonWorked = false;
