@@ -55,81 +55,9 @@ function getAttr(block, tag, attr) {
   return m ? m[1].trim() : '';
 }
 
-async function fetchRedditJSON(sub) {
-  const url = `https://www.reddit.com/r/${sub}.json?limit=25&raw_json=1`;
-  const UA = 'TokyoRadar/1.0 (https://github.com)';
-
-  // 1. Direct Reddit JSON
-  try {
-    const r = await fetch(url, { headers:{'User-Agent':UA}, redirect:'follow', signal:AbortSignal.timeout(6000) });
-    if (r.ok) { const j=await r.json(); if (j?.data?.children?.length) return j; }
-  } catch(e) {}
-
-  // 2. allorigins proxy
-  try {
-    const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { headers:{'User-Agent':UA}, redirect:'follow', signal:AbortSignal.timeout(8000) });
-    if (r.ok) { const w=await r.json(); if (w?.contents) return JSON.parse(w.contents); }
-  } catch(e) {}
-
-  // 3. corsproxy.io
-  try {
-    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { headers:{'User-Agent':UA}, redirect:'follow', signal:AbortSignal.timeout(8000) });
-    if (r.ok) { const j=await r.json(); if (j?.data?.children?.length) return j; }
-  } catch(e) {}
-
-  // 4. jsonp.su proxy
-  try {
-    const r = await fetch(`https://jsonp.su/?url=${encodeURIComponent(url)}&callback=x`, { headers:{'User-Agent':UA}, signal:AbortSignal.timeout(8000) });
-    if (r.ok) {
-      const txt = await r.text();
-      const m = txt.match(/^x\(([\s\S]+)\)$/);
-      if (m) { const j=JSON.parse(m[1]); if (j?.data?.children?.length) return j; }
-    }
-  } catch(e) {}
-
-  return null;
-}
-
 async function fetchReddit() {
   const subs = ['popular','technology','worldnews','programming','business'];
-  const delay = ms => new Promise(res => setTimeout(res, ms));
-  const items = [];
-  let jsonWorked = false;
-
-  for (let i = 0; i < subs.length; i++) {
-    if (i > 0) await delay(1000);
-    const sub = subs[i];
-    try {
-      const j = await fetchRedditJSON(sub);
-      const posts = j?.data?.children || [];
-      if (!posts.length) continue;
-      jsonWorked = true;
-      console.log(`[Reddit] r/${sub}: ${posts.length} posts via JSON`);
-      for (const child of posts) {
-        const p = child.data;
-        if (!p?.title) continue;
-        const ups = p.ups || p.score || 0;
-        const comments = p.num_comments || 0;
-        const seenAt = p.created_utc ? p.created_utc * 1000 : Date.now();
-        const upsFmt = ups >= 1000 ? (ups/1000).toFixed(1)+'k' : String(ups);
-        const url = p.url?.startsWith('http') ? p.url : `https://www.reddit.com${p.permalink}`;
-        items.push({
-          platform: 'Reddit', title: p.title,
-          meta: `r/${p.subreddit||sub} · ${upsFmt} ups · ${comments} comments`,
-          url, tags: ['reddit'],
-          score: ups + comments * 2,
-          seenAt, lastSeen: Date.now()
-        });
-      }
-    } catch(e) {
-      console.log(`Reddit JSON failed for r/${sub}:`, e.message);
-    }
-  }
-
-  if (jsonWorked) return items.filter(i => Date.now() - i.seenAt <= H48);
-
-  // Fallback: RSS (no upvote counts but reliable)
-  console.log('Reddit JSON failed, falling back to RSS');
+  // RSS — reliable from any IP, no upvote counts but posts load consistently
   try {
     const rssResults = await Promise.allSettled(subs.map(sub =>
       fetch(`https://www.reddit.com/r/${sub}/.rss`, {
@@ -369,17 +297,8 @@ async function fetchAlJazeera() {
   return [];
 }
 
-let _lastRedditFetch = 0;
-const REDDIT_INTERVAL = 10 * 60 * 1000; // fetch Reddit every 10 min only
-
 async function fetchAll(){
-  // Reddit: only every 10 min to avoid Pullpush 429s
-  let reddit = [];
-  if (Date.now() - _lastRedditFetch >= REDDIT_INTERVAL) {
-    reddit = await fetchReddit();
-    _lastRedditFetch = Date.now();
-  }
-  const [google, hn, devto, xtrends, tiktok, aljazeera] = await Promise.all([fetchGoogle(), fetchHN(), fetchDevTo(), fetchXTrends(), fetchTikTok(), fetchAlJazeera()]);
+  const [reddit, google, hn, devto, xtrends, tiktok, aljazeera] = await Promise.all([fetchReddit(), fetchGoogle(), fetchHN(), fetchDevTo(), fetchXTrends(), fetchTikTok(), fetchAlJazeera()]);
   CACHE.items = merge(CACHE.items, [...reddit, ...google, ...hn, ...devto, ...xtrends, ...tiktok, ...aljazeera]);
   CACHE.lastFetch = Date.now();
   const counts = { Reddit: reddit.length, 'Google Trends': google.length, 'Hacker News': hn.length, 'Dev.to': devto.length, 'X Trends': xtrends.length, TikTok: tiktok.length, 'Al Jazeera': aljazeera.length };
