@@ -55,52 +55,67 @@ function getAttr(block, tag, attr) {
   return m ? m[1].trim() : '';
 }
 
+async function fetchRedditJSON(sub) {
+  // Try direct Reddit JSON first, then via allorigins proxy (bypasses datacenter IP blocks)
+  const url = `https://www.reddit.com/r/${sub}.json?limit=25&raw_json=1`;
+  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  const UA = 'TokyoRadar/1.0 (https://github.com)';
+
+  // 1. Direct
+  try {
+    const r = await fetch(url, { headers: { 'User-Agent': UA }, redirect: 'follow' });
+    if (r.ok) { const j = await r.json(); if (j?.data?.children?.length) return j; }
+  } catch(e) {}
+
+  // 2. allorigins proxy
+  try {
+    const r = await fetch(proxyUrl, { headers: { 'User-Agent': UA }, redirect: 'follow' });
+    if (r.ok) {
+      const wrapper = await r.json();
+      if (wrapper?.contents) return JSON.parse(wrapper.contents);
+    }
+  } catch(e) {}
+
+  return null;
+}
+
 async function fetchReddit() {
   const subs = ['popular','technology','worldnews','programming','business'];
   const delay = ms => new Promise(res => setTimeout(res, ms));
   const items = [];
+  let jsonWorked = false;
 
-  // Try Pullpush.io — community Reddit mirror, works from datacenter IPs, has upvote scores
-  // Use 2s delay between subs to avoid 429s (Pullpush rate-limits aggressive callers)
-  let pullpushWorked = false;
   for (let i = 0; i < subs.length; i++) {
-    if (i > 0) await delay(2000);
+    if (i > 0) await delay(1000);
     const sub = subs[i];
     try {
-      const r = await fetch(
-        `https://api.pullpush.io/reddit/search/submission/?subreddit=${sub}&size=25&sort=created_utc&order=desc`,
-        { headers: { 'User-Agent': 'TokyoRadar/1.0', 'Accept': 'application/json' }, redirect: 'follow' }
-      );
-      if (!r.ok) throw new Error(r.status);
-      const j = await r.json();
-      const posts = j.data || [];
-      console.log(`[Pullpush] r/${sub}: ${posts.length} posts`);
+      const j = await fetchRedditJSON(sub);
+      const posts = j?.data?.children || [];
       if (!posts.length) continue;
-      pullpushWorked = true;
-      for (const p of posts) {
-        if (!p.title) continue;
-        const ups = p.score || 0;
+      jsonWorked = true;
+      console.log(`[Reddit] r/${sub}: ${posts.length} posts via JSON`);
+      for (const child of posts) {
+        const p = child.data;
+        if (!p?.title) continue;
+        const ups = p.ups || p.score || 0;
         const comments = p.num_comments || 0;
         const seenAt = p.created_utc ? p.created_utc * 1000 : Date.now();
         const upsFmt = ups >= 1000 ? (ups/1000).toFixed(1)+'k' : String(ups);
         const url = p.url?.startsWith('http') ? p.url : `https://www.reddit.com${p.permalink}`;
         items.push({
-          platform: 'Reddit',
-          title: p.title,
+          platform: 'Reddit', title: p.title,
           meta: `r/${p.subreddit||sub} · ${upsFmt} ups · ${comments} comments`,
-          url,
-          tags: ['reddit'],
+          url, tags: ['reddit'],
           score: ups + comments * 2,
-          seenAt,
-          lastSeen: Date.now()
+          seenAt, lastSeen: Date.now()
         });
       }
     } catch(e) {
-      console.log(`Pullpush failed for r/${sub}:`, e.message);
+      console.log(`Reddit JSON failed for r/${sub}:`, e.message);
     }
   }
 
-  if (pullpushWorked) return items.filter(i => Date.now() - i.seenAt <= H48);
+  if (jsonWorked) return items.filter(i => Date.now() - i.seenAt <= H48);
 
   // Fallback: RSS (no upvote counts but reliable)
   console.log('Reddit JSON failed, falling back to RSS');
