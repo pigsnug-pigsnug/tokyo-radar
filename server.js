@@ -61,19 +61,19 @@ async function fetchReddit() {
   const items = [];
 
   // Try Pullpush.io — community Reddit mirror, works from datacenter IPs, has upvote scores
-  const since = Math.floor((Date.now() - H48) / 1000);
   let pullpushWorked = false;
   for (let i = 0; i < subs.length; i++) {
     if (i > 0) await delay(500);
     const sub = subs[i];
     try {
       const r = await fetch(
-        `https://api.pullpush.io/reddit/search/submission/?subreddit=${sub}&size=25&sort=score&order=desc&after=${since}`,
+        `https://api.pullpush.io/reddit/search/submission/?subreddit=${sub}&size=25&sort=created_utc&order=desc`,
         { headers: { 'User-Agent': 'TokyoRadar/1.0', 'Accept': 'application/json' }, redirect: 'follow' }
       );
       if (!r.ok) throw new Error(r.status);
       const j = await r.json();
       const posts = j.data || [];
+      console.log(`[Pullpush] r/${sub}: ${posts.length} posts`);
       if (!posts.length) continue;
       pullpushWorked = true;
       for (const p of posts) {
