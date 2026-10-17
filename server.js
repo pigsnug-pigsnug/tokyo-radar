@@ -56,23 +56,34 @@ function getAttr(block, tag, attr) {
 }
 
 async function fetchRedditJSON(sub) {
-  // Try direct Reddit JSON first, then via allorigins proxy (bypasses datacenter IP blocks)
   const url = `https://www.reddit.com/r/${sub}.json?limit=25&raw_json=1`;
-  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
   const UA = 'TokyoRadar/1.0 (https://github.com)';
 
-  // 1. Direct
+  // 1. Direct Reddit JSON
   try {
-    const r = await fetch(url, { headers: { 'User-Agent': UA }, redirect: 'follow' });
-    if (r.ok) { const j = await r.json(); if (j?.data?.children?.length) return j; }
+    const r = await fetch(url, { headers:{'User-Agent':UA}, redirect:'follow', signal:AbortSignal.timeout(6000) });
+    if (r.ok) { const j=await r.json(); if (j?.data?.children?.length) return j; }
   } catch(e) {}
 
   // 2. allorigins proxy
   try {
-    const r = await fetch(proxyUrl, { headers: { 'User-Agent': UA }, redirect: 'follow' });
+    const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { headers:{'User-Agent':UA}, redirect:'follow', signal:AbortSignal.timeout(8000) });
+    if (r.ok) { const w=await r.json(); if (w?.contents) return JSON.parse(w.contents); }
+  } catch(e) {}
+
+  // 3. corsproxy.io
+  try {
+    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { headers:{'User-Agent':UA}, redirect:'follow', signal:AbortSignal.timeout(8000) });
+    if (r.ok) { const j=await r.json(); if (j?.data?.children?.length) return j; }
+  } catch(e) {}
+
+  // 4. jsonp.su proxy
+  try {
+    const r = await fetch(`https://jsonp.su/?url=${encodeURIComponent(url)}&callback=x`, { headers:{'User-Agent':UA}, signal:AbortSignal.timeout(8000) });
     if (r.ok) {
-      const wrapper = await r.json();
-      if (wrapper?.contents) return JSON.parse(wrapper.contents);
+      const txt = await r.text();
+      const m = txt.match(/^x\(([\s\S]+)\)$/);
+      if (m) { const j=JSON.parse(m[1]); if (j?.data?.children?.length) return j; }
     }
   } catch(e) {}
 

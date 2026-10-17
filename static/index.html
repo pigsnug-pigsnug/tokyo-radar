@@ -1512,9 +1512,12 @@ function multiRender(){
     var meta=live?live.meta:'';
     var d=new Date(_multiDetected[k]);
     var when=d.toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata',month:'short',day:'numeric'})+' '+d.toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true});
+    var miid=itemId(url||title,title);
+    _itemCache[miid]={title:title,meta:meta||'',url:url||'',platform:platform};
     return '<div class="pulse-item">'+pulseBadge(platform)+'<div class="pulse-item-body">'+
       '<div class="pulse-item-title">'+(url?'<a href="'+escHtml(url)+'" target="_blank" rel="noopener">'+escHtml(title)+'</a>':escHtml(title))+multiSignalTag(title,platform)+'</div>'+
       '<div class="pulse-item-meta">'+(meta?escHtml(meta)+'&nbsp;·&nbsp;':'')+'first seen '+when+'</div>'+
+      '<div class="pulse-item-actions"><button class="launch-btn" onclick="icLaunch(\''+miid+'\')">🚀 Launch</button></div>'+
     '</div></div>';
   }).join('');
 }
@@ -2245,50 +2248,73 @@ function shuffled(arr){
 function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
 
 function genTweetA(coin,hook,title,meta,platform){
-  var openers=['bro.','"'+hook+'"','did you see this?','okay hear me out.','not me finding the next coin on '+platform+'.'];
-  var middles=['this is literally $'+coin+' calling.','$'+coin+' was made for this moment.','the narrative just wrote itself.','the chart doesn\'t exist yet. that\'s the point.'];
-  var closers=['CA dropping soon 👀','who\'s early? 🫵','pump.fun. now.','follow for CA 🔥','this is the play.'];
-  return pick(openers)+'\n\n'+pick(middles)+'\n\n'+pick(closers);
-}
-
-function genTweetB(coin,hook,title,meta,platform){
-  var setups=['what if i told you','"'+hook+'" is trending',title.length<80?'"'+title+'"':'the news is moving'];
-  var punchlines=['and someone already launched $'+coin+' on pump.fun','and $'+coin+' doesn\'t have a coin yet','and we\'re still not launching $'+coin+'?','so naturally we launch $'+coin+''];
-  var endings=['gm 🚀','ser.','that\'s the tweet.','you in? 👇'];
-  return pick(setups)+'\n\n'+pick(punchlines)+'\n\n'+pick(endings);
-}
-
-function genTweetC(coin,hook,title,meta,platform){
+  // Sharp news-to-coin angle — direct statement
+  var src={'Reddit':'Reddit','Google Trends':'Google','Hacker News':'HN','X Trends':'X','Dev.to':'devs','Al Jazeera':'AJ','TikTok':'TikTok'}[platform]||'the internet';
   var lines=[
-    hook,
+    pick([src+' just handed us the narrative.','The narrative just landed.']),
     '',
-    'this is not financial advice',
-    'this is a $'+coin+' announcement',
+    '"'+hook+'"',
     '',
-    'CA: coming 🔜',
-    'pump.fun 🟢'
+    '$'+coin+' is the play.',
+    pick(['pump.fun. early window open.','CA deploying. get in or watch.','first movers eat. latecomers cope.']),
   ];
   return lines.join('\n');
 }
 
-function genTweetD(coin,hook,title,meta,platform){
-  var intros=['BREAKING:','NOT FINANCIAL ADVICE BUT:','okay so','THREAD 🧵 (1/1):'];
-  var bodies=[
-    '"'+hook+'" is real\n\n$'+coin+' is the coin\n\npump.fun is the venue\n\nwe are so early',
-    '"'+hook+'" just dropped\n\nif this doesn\'t pump a meme coin idk what will\n\n$'+coin+' let\'s go',
-    'someone needs to launch $'+coin+'\n\n"'+hook+'"\n\nthe lore writes itself fr'
+function genTweetB(coin,hook,title,meta,platform){
+  // Confident insider voice
+  var opens=[
+    'every cycle has a moment where the trade is obvious to anyone paying attention.',
+    'you either see it or you don\'t.',
+    'this is the kind of thing that pays rent.',
+    'i\'m not telling you what to do. i\'m telling you what i see.',
   ];
-  return pick(intros)+'\n\n'+pick(bodies);
+  return pick(opens)+'\n\n"'+hook+'"\n\n$'+coin+' — no chart yet. that\'s why it\'s interesting.\n\npump.fun 🟢';
+}
+
+function genTweetC(coin,hook,title,meta,platform){
+  // Punchy 3-line format — clean and loud
+  var verb=pick(['just broke.','is live.','dropped.','is moving.']);
+  return '"'+hook+'" '+verb+'\n\n$'+coin+' — CA incoming\n\nearly = everything on pump.fun 🔺';
+}
+
+function genTweetD(coin,hook,title,meta,platform){
+  // Tactical breakdown style
+  var lines=[
+    '📌 the signal:',
+    '"'+hook+'"',
+    '',
+    '📌 the coin:',
+    '$'+coin,
+    '',
+    '📌 the venue:',
+    'pump.fun',
+    '',
+    'the rest is timing. clock is running.'
+  ];
+  return lines.join('\n');
 }
 
 function genTweetE(coin,hook,title,meta,platform){
-  return 'i have found your next play\n\n"'+hook+'"\n\n$'+coin+' on pump.fun\n\nthe people who were early will not explain how they knew\n\nthey just knew 👁️';
+  // Cold market analyst voice
+  var src={'Reddit':'r/popular is talking about','Google Trends':'google trends flagged','Hacker News':'hacker news surfaced','X Trends':'X trending on','Dev.to':'devs are discussing','Al Jazeera':'AJ reported','TikTok':'TikTok is running'}[platform]||'trending:';
+  return src+' "'+hook+'"\n\nthis is exactly how $'+coin+' narratives start.\n\nnot financial advice. just pattern recognition.\n\nCA: soon 👁️';
 }
 
 function genTweetF(coin,hook,title,meta,platform){
-  var sources={'Reddit':'reddit was cooking','Google Trends':'google trends spotted','Hacker News':'hacker news is onto something','X Trends':'x is talking about it','Dev.to':'devs are onto this'};
-  var src=sources[platform]||'the internet noticed';
-  return src+' 👀\n\n"'+hook+'"\n\n$'+coin+'\n\nnot a shill. just a guy who reads the news.\n\nCA soon 🔒';
+  // Maximum urgency — FOMO format
+  var lines=[
+    pick(['LIVE NOW:','RIGHT NOW:','BREAKING:']),
+    '',
+    '"'+hook+'"',
+    '',
+    '$'+coin+' is undeployed.',
+    'window: open.',
+    'pump.fun ↗',
+    '',
+    pick(['move first or move on.','early birds don\'t explain themselves.','CA dropping. don\'t ask me twice.'])
+  ];
+  return lines.join('\n');
 }
 
 /* ══════════════════════════════════════════════════════════
