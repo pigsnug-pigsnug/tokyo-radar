@@ -61,9 +61,10 @@ async function fetchReddit() {
   const items = [];
 
   // Try Pullpush.io — community Reddit mirror, works from datacenter IPs, has upvote scores
+  // Use 2s delay between subs to avoid 429s (Pullpush rate-limits aggressive callers)
   let pullpushWorked = false;
   for (let i = 0; i < subs.length; i++) {
-    if (i > 0) await delay(500);
+    if (i > 0) await delay(2000);
     const sub = subs[i];
     try {
       const r = await fetch(
@@ -342,8 +343,17 @@ async function fetchAlJazeera() {
   return [];
 }
 
+let _lastRedditFetch = 0;
+const REDDIT_INTERVAL = 10 * 60 * 1000; // fetch Reddit every 10 min only
+
 async function fetchAll(){
-  const [reddit, google, hn, devto, xtrends, tiktok, aljazeera] = await Promise.all([fetchReddit(), fetchGoogle(), fetchHN(), fetchDevTo(), fetchXTrends(), fetchTikTok(), fetchAlJazeera()]);
+  // Reddit: only every 10 min to avoid Pullpush 429s
+  let reddit = [];
+  if (Date.now() - _lastRedditFetch >= REDDIT_INTERVAL) {
+    reddit = await fetchReddit();
+    _lastRedditFetch = Date.now();
+  }
+  const [google, hn, devto, xtrends, tiktok, aljazeera] = await Promise.all([fetchGoogle(), fetchHN(), fetchDevTo(), fetchXTrends(), fetchTikTok(), fetchAlJazeera()]);
   CACHE.items = merge(CACHE.items, [...reddit, ...google, ...hn, ...devto, ...xtrends, ...tiktok, ...aljazeera]);
   CACHE.lastFetch = Date.now();
   const counts = { Reddit: reddit.length, 'Google Trends': google.length, 'Hacker News': hn.length, 'Dev.to': devto.length, 'X Trends': xtrends.length, TikTok: tiktok.length, 'Al Jazeera': aljazeera.length };
