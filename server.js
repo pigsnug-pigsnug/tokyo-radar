@@ -141,8 +141,33 @@ async function fetchDevTo() {
 function merge(ex,fr){
   const map=new Map();
   for(const i of ex) map.set(`${i.platform}::${i.title.toLowerCase().trim()}`,i);
-  for(const i of fr){const k=`${i.platform}::${i.title.toLowerCase().trim()}`;if(map.has(k)){map.get(k).lastSeen=i.lastSeen;map.get(k).score=i.score;}else map.set(k,i);}
-  return Array.from(map.values()).filter(i=>Date.now()-i.seenAt<=H48).sort((a,b)=>b.seenAt-a.seenAt);
+  for(const i of fr){
+    const k=`${i.platform}::${i.title.toLowerCase().trim()}`;
+    if(map.has(k)){
+      const existing=map.get(k);
+      existing.lastSeen=i.lastSeen;
+      existing.score=i.score;
+      // Velocity: count how many fetch cycles this item has reappeared
+      existing.hitCount=(existing.hitCount||1)+1;
+    } else {
+      i.hitCount=1;
+      map.set(k,i);
+    }
+  }
+  const now=Date.now();
+  const H1=60*60*1000;
+  const items=Array.from(map.values()).filter(i=>now-i.seenAt<=H48);
+  // Compute velocity: items seen multiple times recently get higher score
+  for(const i of items){
+    const ageH=(now-i.seenAt)/H1; // hours old
+    const hits=i.hitCount||1;
+    // velocity = 0 (new), 1 (seen 2-3x or very recent multi-hit), 2 (seen 4+ times), 3 (seen 6+ and fresh)
+    if(hits>=6&&ageH<6) i.velocity=3;
+    else if(hits>=4) i.velocity=2;
+    else if(hits>=2) i.velocity=1;
+    else i.velocity=0;
+  }
+  return items.sort((a,b)=>b.seenAt-a.seenAt);
 }
 
 async function fetchXTrends() {

@@ -591,6 +591,11 @@ html[data-theme="rbw"] .pwb-chip{color:#FFD600}
 .pwb-chip:hover{background:#FFD600;color:#000}
 .pwb-hits{font-size:11px;color:#A86B0B;font-family:var(--mono);white-space:nowrap}
 html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
+.psb-alert-btn{margin-top:6px;width:100%;padding:4px 8px;border-radius:8px;border:1px solid #ccc;background:var(--bg-2,#f5f5f5);color:var(--muted,#666);font-size:11px;font-family:var(--mono);cursor:pointer;text-align:center;transition:all .15s}
+.psb-alert-btn:hover{border-color:#888;color:var(--fg,#222)}
+.psb-alert-btn.alert-on{background:#00E650;color:#000;border-color:#00C440;font-weight:700}
+html[data-theme="dark"] .psb-alert-btn{background:#1a1a1a;color:#aaa;border-color:#333}
+html[data-theme="dark"] .psb-alert-btn.alert-on{background:#00C440;color:#000;border-color:#00A030}
 </style>
 </head>
 <body>
@@ -677,6 +682,7 @@ html[data-theme="dark"] .pwb-hits,.pwb-hits{color:#FFD600}
       </div>
       <div class="psb-chips" id="pwb-chips"></div>
       <div class="psb-hits" id="pwb-hits" style="display:none"></div>
+      <button id="alert-sound-btn" onclick="alertSoundToggle()" class="psb-alert-btn" title="Ping when a watched keyword hits a new item">🔕 Alert: OFF</button>
     </div>
 
     <!-- Search -->
@@ -1170,6 +1176,11 @@ function appInit(){
   binUpdateCount();
   scrollTopInit();
   morningDigestInit();
+  // Restore alert sound button state
+  (function(){
+    var btn=document.getElementById('alert-sound-btn');
+    if(btn){btn.textContent=_alertSoundOn?'🔔 Alert: ON':'🔕 Alert: OFF';btn.classList.toggle('alert-on',_alertSoundOn);}
+  })();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1263,6 +1274,54 @@ function pwbMatch(text){
   if(!_pwbWords.length)return false;
   return _pwbWords.some(function(w){return text.toLowerCase().includes(w);});
 }
+
+/* ══════════════════════════════════════════════════════════
+   COIN ALERT SOUND — audio ping when watchword hit arrives
+   ══════════════════════════════════════════════════════════ */
+var _alertSoundOn=false;
+try{var _asv=localStorage.getItem('tr_coin_alert_sound');if(_asv!==null)_alertSoundOn=_asv==='1';}catch(e){}
+var _lastAlertKey='';
+
+function alertSoundToggle(){
+  _alertSoundOn=!_alertSoundOn;
+  try{localStorage.setItem('tr_coin_alert_sound',_alertSoundOn?'1':'0');}catch(e){}
+  var btn=document.getElementById('alert-sound-btn');
+  if(btn){btn.textContent=_alertSoundOn?'🔔 Alert: ON':'🔕 Alert: OFF';btn.classList.toggle('alert-on',_alertSoundOn);}
+  if(_alertSoundOn){
+    // Play a test ping so the user knows it works
+    playAlertPing(880,60);
+  }
+}
+
+function playAlertPing(freq,dur){
+  try{
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    var osc=ctx.createOscillator();
+    var gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.frequency.value=freq||880;
+    osc.type='sine';
+    gain.gain.setValueAtTime(0.4,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+(dur||80)/1000);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime+(dur||80)/1000);
+    osc.onended=function(){ctx.close();};
+  }catch(e){}
+}
+
+function maybePingAlert(newItems){
+  if(!_alertSoundOn||!_pwbWords.length)return;
+  var hits=newItems.filter(function(i){return pwbMatch(i.title+' '+(i.meta||''));});
+  if(!hits.length)return;
+  // Deduplicate: only ping if we haven't pinged this exact item key in the last 5 min
+  var key=hits.map(function(i){return i.platform+'::'+i.title;}).join('|');
+  if(key===_lastAlertKey)return;
+  _lastAlertKey=key;
+  // Double-ping: 880Hz then 1100Hz
+  playAlertPing(880,80);
+  setTimeout(function(){playAlertPing(1100,60);},120);
+}
+
 function highlightWatchWords(text){
   var s=escHtml(text);
   _pwbWords.forEach(function(w){
@@ -1376,6 +1435,15 @@ function isMultiSignal(title,platform){
   if(_multiDetected[k])return true;
   return getMultiPlatforms(title).size>=3;
 }
+function getMultiWords(title){
+  // Return array of words that appear on 3+ platforms
+  var words=title.toLowerCase().replace(/[^\w\s]/g,' ').split(/\s+/).filter(function(w){return w.length>4;});
+  var trigger=[];
+  words.forEach(function(w){
+    if(_multiMap[w]&&_multiMap[w].platforms.size>=3&&trigger.indexOf(w)===-1)trigger.push(w);
+  });
+  return trigger;
+}
 function multiSignalTag(title,platform){
   var plats=getMultiPlatforms(title);
   if(plats.size<2){
@@ -1388,7 +1456,12 @@ function multiSignalTag(title,platform){
   if(plats.has(platform))icons.push(platIcon(platform));
   plats.forEach(function(p){if(p!==platform)icons.push(platIcon(p));});
   if(!icons.length)icons=['⚡'];
-  return '<span class="multi-badge" title="Spotted on '+Array.from(plats).join(', ')+'">'+icons.join(' ')+'</span>';
+  // "Why multi?" tooltip: show trigger words + platforms
+  var trigWords=getMultiWords(title);
+  var platList=Array.from(plats).join(', ');
+  var tooltip=platList;
+  if(trigWords.length)tooltip+=' · words: '+trigWords.join(', ');
+  return '<span class="multi-badge" title="'+escHtml(tooltip)+'">'+icons.join(' ')+'</span>';
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1679,6 +1752,7 @@ function pulseFetch(){
       if(el)el.textContent='Updated just now · '+all.length+' items'+(viral?' · 🔥 '+viral+' viral':'');
       pulsePage=0;
       pulseRender();
+      maybePingAlert(all);
       starredUpdateCount();
       notesUpdateCount();
       updateSidebarCounts();
@@ -1688,6 +1762,7 @@ function pulseFetch(){
       var existingKeys=new Set(pulseData.all_items.map(function(i){return(i.platform+'::'+i.title).toLowerCase();}));
       var newItems=all.filter(function(i){return!existingKeys.has((i.platform+'::'+i.title).toLowerCase());});
       if(newItems.length>0){
+        maybePingAlert(newItems);
         _pendingItems={all:all,clientNow:clientNow,viral:viral,newCount:newItems.length};
         // Show unread dot if not on Pulse tab
         if(_activeTab!=='pulse'){
@@ -1893,8 +1968,9 @@ function pulseItemHtml(i,q){
   var viralTag=viral?'<span class="viral-badge">🔥 VIRAL</span>':'';
   var multiTag=multiSignalTag(i.title,i.platform);
   var velTag='';
-  if(i.velocity>2)velTag='<span class="vel-up">🔺🔺</span>';
-  else if(i.velocity>0)velTag='<span class="vel-up">🔺</span>';
+  if(i.velocity>=3)velTag='<span class="vel-up" title="Very high velocity — seen 6+ times, trending fast">🔺🔺🔺</span>';
+  else if(i.velocity>=2)velTag='<span class="vel-up" title="High velocity — story gaining traction">🔺🔺</span>';
+  else if(i.velocity>=1)velTag='<span class="vel-up" title="Rising — appeared across multiple cycles">🔺</span>';
   var watchHit=pwbMatch(i.title+' '+(i.meta||''));
   var seen=isSeen(i.url||i.title);
   var nk=noteKey(i.url,i.title);
@@ -3321,7 +3397,7 @@ function removeImage(id){if(confirm('Delete?'))remove('images',id)}
 <div class="mkt-panel" id="mkt-panel">
   <div class="mkt-header" id="mkt-drag-handle">
     <span class="mkt-title">📊 Market</span>
-    <span class="mkt-sol" id="mkt-sol-price">—</span>
+    <span class="mkt-sol">◎ <span id="mkt-sol-price">—</span></span>
     <span class="mkt-caret" id="mkt-caret" onclick="mktToggle();event.stopPropagation()">▾</span>
   </div>
   <div class="mkt-body open" id="mkt-body">
