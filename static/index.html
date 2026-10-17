@@ -1111,7 +1111,7 @@ function switchTab(t){
     var dot=document.getElementById('tab-pulse');
     if(dot)dot.classList.remove('has-unread');
     if(_pendingItems){
-      showNewItemsBanner(_pendingItems.newCount);
+      applyNewItems();
     }
   }
 }
@@ -1663,8 +1663,8 @@ function pulseFetch(){
           var tab=document.getElementById('tab-pulse');
           if(tab)tab.classList.add('has-unread');
         } else {
-          // On Pulse tab — show the banner instead
-          showNewItemsBanner(newItems.length);
+          // On Pulse tab — auto-apply immediately
+          applyNewItems();
         }
         if(el)el.textContent=''+newItems.length+' new items ready';
       } else {
