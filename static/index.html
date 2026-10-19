@@ -950,7 +950,7 @@ html[data-theme="dark"] .psb-alert-btn.alert-on{background:#00C440;color:#000;bo
       <button class="lm-regen" style="flex:1" onclick="launchRegen()">⟳ New variations</button>
       <button id="lm-log-btn" class="lm-regen" style="flex:1;border-color:#00E676;color:#00E676" onclick="confirmLogLaunch()">📋 Log this launch</button>
     </div>
-    <div style="font-size:11px;color:#4B5563;font-family:var(--mono);text-align:center;margin-top:6px">Opening this modal does not log anything — click above when you actually launch</div>
+    <div style="font-size:11px;color:#4B5563;font-family:var(--mono);text-align:center;margin-top:6px">Logged to launch history automatically when opened</div>
   </div>
 </div>
 
@@ -1436,32 +1436,34 @@ function isMultiSignal(title,platform){
   return getMultiPlatforms(title).size>=3;
 }
 function getMultiWords(title){
-  // Return array of words that appear on 3+ platforms
-  var words=title.toLowerCase().replace(/[^\w\s]/g,' ').split(/\s+/).filter(function(w){return w.length>4;});
-  var trigger=[];
-  words.forEach(function(w){
-    if(_multiMap[w]&&_multiMap[w].platforms.size>=3&&trigger.indexOf(w)===-1)trigger.push(w);
-  });
-  return trigger;
+  try{
+    var words=title.toLowerCase().replace(/[^\w\s]/g,' ').split(/\s+/).filter(function(w){return w.length>4;});
+    var trigger=[];
+    words.forEach(function(w){
+      if(_multiMap[w]&&_multiMap[w].platforms&&_multiMap[w].platforms.size>=3&&trigger.indexOf(w)===-1)trigger.push(w);
+    });
+    return trigger;
+  }catch(e){return [];}
 }
 function multiSignalTag(title,platform){
-  var plats=getMultiPlatforms(title);
-  if(plats.size<2){
-    // Check persisted
-    var k=((platform||'')+'::'+title).toLowerCase();
-    if(!_multiDetected[k])return '';
-  }
-  // Build icon row — current platform first, then others
-  var icons=[];
-  if(plats.has(platform))icons.push(platIcon(platform));
-  plats.forEach(function(p){if(p!==platform)icons.push(platIcon(p));});
-  if(!icons.length)icons=['⚡'];
-  // "Why multi?" tooltip: show trigger words + platforms
-  var trigWords=getMultiWords(title);
-  var platList=Array.from(plats).join(', ');
-  var tooltip=platList;
-  if(trigWords.length)tooltip+=' · words: '+trigWords.join(', ');
-  return '<span class="multi-badge" title="'+escHtml(tooltip)+'">'+icons.join(' ')+'</span>';
+  try{
+    var plats=getMultiPlatforms(title);
+    if(plats.size<2){
+      var k=((platform||'')+'::'+title).toLowerCase();
+      if(!_multiDetected[k])return '';
+    }
+    var icons=[];
+    if(plats.has(platform))icons.push(platIcon(platform));
+    plats.forEach(function(p){if(p!==platform)icons.push(platIcon(p));});
+    if(!icons.length)icons=['⚡'];
+    var trigWords=getMultiWords(title);
+    var platList=Array.from(plats).join(', ');
+    var tooltip=platList;
+    if(trigWords.length)tooltip+=' · words: '+trigWords.join(', ');
+    // Safe tooltip: replace quotes to avoid breaking the title attribute
+    tooltip=tooltip.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    return '<span class="multi-badge" title="'+tooltip+'">'+icons.join(' ')+'</span>';
+  }catch(e){return '';}
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -2005,12 +2007,12 @@ function pulseItemHtml(i,q){
 }
 
 /* ── Cache-based action handlers (no escaping issues) ── */
-function icLaunch(iid){var i=icGet(iid);if(i)openLaunchModal(i.title,i.meta,i.url,i.platform);}
-function icStar(btn,iid){var i=icGet(iid);if(i)starToggle(btn,i.title,i.meta,i.url,i.platform);}
-function icSave(btn,iid){var i=icGet(iid);if(i)savedToggle(btn,i.title,i.meta,i.url,i.platform);}
-function icNote(nid,iid){var i=icGet(iid);if(i)toggleNote(nid,i.url,i.title);}
-function icSubmitNote(nid,iid){var i=icGet(iid);if(i)submitNote(nid,i.url,i.title);}
-function icTweet(iid){var i=icGet(iid);if(i)openTweetModal(i.title,i.meta,i.url,i.platform);}
+function icLaunch(iid){try{var i=icGet(iid);if(i)openLaunchModal(i.title,i.meta,i.url,i.platform);else console.warn('icLaunch: iid not found',iid);}catch(e){console.error('icLaunch error',e);}}
+function icStar(btn,iid){try{var i=icGet(iid);if(i)starToggle(btn,i.title,i.meta,i.url,i.platform);else console.warn('icStar: iid not found',iid);}catch(e){console.error('icStar error',e);}}
+function icSave(btn,iid){try{var i=icGet(iid);if(i)savedToggle(btn,i.title,i.meta,i.url,i.platform);else console.warn('icSave: iid not found',iid);}catch(e){console.error('icSave error',e);}}
+function icNote(nid,iid){try{var i=icGet(iid);if(i)toggleNote(nid,i.url,i.title);else console.warn('icNote: iid not found',iid);}catch(e){console.error('icNote error',e);}}
+function icSubmitNote(nid,iid){try{var i=icGet(iid);if(i)submitNote(nid,i.url,i.title);}catch(e){console.error('icSubmitNote error',e);}}
+function icTweet(iid){try{var i=icGet(iid);if(i)openTweetModal(i.title,i.meta,i.url,i.platform);else console.warn('icTweet: iid not found',iid);}catch(e){console.error('icTweet error',e);}}
 // markSeen by iid — look up url from cache
 var _origMarkSeen=markSeen;
 markSeen=function(key){
@@ -2066,11 +2068,12 @@ function openLaunchModal(title,meta,url,platform){
   var topicEl=document.getElementById('lm-topic-text');
   if(topicEl)topicEl.textContent='📌 '+title+(meta?' · '+meta:'');
   launchGenerate();
-  // Reset log button state
+  // Auto-log when modal opens — user opened it = they're launching
+  logLaunch(title,meta,platform);
+  // Show log button as already logged
   var logBtn=document.getElementById('lm-log-btn');
-  if(logBtn){logBtn.textContent='📋 Log this launch';logBtn.disabled=false;logBtn.classList.remove('logged');}
+  if(logBtn){logBtn.textContent='✅ Logged!';logBtn.disabled=true;logBtn.classList.add('logged');}
   document.getElementById('launch-modal').classList.add('open');
-  // logLaunch is NOT called here — only when user clicks "Log this launch"
 }
 function confirmLogLaunch(){
   var btn=document.getElementById('lm-log-btn');
