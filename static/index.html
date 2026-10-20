@@ -175,6 +175,7 @@ a{color:inherit}
 .pulse-item[data-platform="Hacker News"]{border-left-color:#FF6600}
 .pulse-item[data-platform="Google Trends"]{border-left-color:#4285F4}
 .pulse-item[data-platform="Al Jazeera"]{border-left-color:#C8972A}
+.pulse-item[data-platform="SOL Web"]{border-left-color:#9945FF}
 .pulse-item-badge{flex-shrink:0;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;font-family:var(--mono);white-space:nowrap}
 .badge-reddit{background:#FF4500;color:#fff}
 .badge-hn{background:#FF6600;color:#fff}
@@ -183,6 +184,7 @@ a{color:inherit}
 .badge-x{background:#000;color:#fff}
 .badge-tiktok{background:linear-gradient(135deg,#010101 0%,#69C9D0 50%,#EE1D52 100%);color:#fff}
 .badge-aljazeera{background:#C8972A;color:#fff}
+.badge-solweb{background:#9945FF;color:#fff}
 /* Viral green flash */
 .pulse-item.viral{background:rgba(0,230,80,.07);border-left-color:#00E650!important;animation:viralPulse 2.5s ease-in-out infinite}
 .pulse-item.viral .pulse-item-title a{font-size:16px;font-weight:700;color:#fff}
@@ -705,6 +707,7 @@ html[data-theme="dark"] .psb-alert-btn.alert-on{background:#00C440;color:#000;bo
       <button class="psb-btn" onclick="setSideFilter('Hacker News',this)">HN</button>
       <button class="psb-btn" onclick="setSideFilter('Google Trends',this)">Trends</button>
       <button class="psb-btn" onclick="setSideFilter('Al Jazeera',this)">AJ</button>
+      <button class="psb-btn" onclick="setSideFilter('SOL Web',this)" style="background:#9945FF;color:#fff;border-color:#9945FF">◎SOL</button>
       <button class="psb-btn" onclick="setSideFilter('__saved',this)">🔖 Saved <span class="psb-count" id="psb-saved-count"></span></button>
       <button class="psb-btn" onclick="setSideFilter('__starred',this)">★ Stars <span class="psb-count" id="psb-stars-count"></span></button>
       <button class="psb-btn" onclick="setSideFilter('__notes',this)">✎ Notes <span class="psb-count" id="psb-notes-count"></span></button>
@@ -752,6 +755,7 @@ html[data-theme="dark"] .psb-alert-btn.alert-on{background:#00C440;color:#000;bo
           <button onclick="setPulseFilter('X Trends',this)">X</button>
           <button onclick="setPulseFilter('TikTok',this)">TikTok</button>
           <button onclick="setPulseFilter('Al Jazeera',this)">AJ</button>
+          <button onclick="setPulseFilter('SOL Web',this)" style="background:#9945FF;color:#fff;border-color:#9945FF">◎ SOL</button>
         </div>
         <div class="pulse-filter-group" id="pulse-time-filters">
           <button class="active" onclick="setPulseTime('all',this)">All</button>
@@ -1418,7 +1422,7 @@ function buildMultiSignalMap(items){
 }
 var _multiMap={};
 // Platform → short symbol
-var _platIcon={'Reddit':'👽','X Trends':'𝕏','TikTok':'♪','Hacker News':'Y','Google Trends':'⌖','Al Jazeera':'AJ','Dev.to':'{}','YouTube':'▶'};
+var _platIcon={'Reddit':'👽','X Trends':'𝕏','TikTok':'♪','Hacker News':'Y','Google Trends':'⌖','Al Jazeera':'AJ','Dev.to':'{}','YouTube':'▶','SOL Web':'◎'};
 function platIcon(p){return _platIcon[p]||p.slice(0,2);}
 
 function getMultiPlatforms(title){
@@ -1951,9 +1955,9 @@ function updateSidebarCounts(){
   }catch(e){}
 }
 function pulseBadge(p){
-  var map={'Reddit':'badge-reddit','Hacker News':'badge-hn','Google Trends':'badge-google','Dev.to':'badge-devto','X Trends':'badge-x','TikTok':'badge-tiktok','Al Jazeera':'badge-aljazeera'};
+  var map={'Reddit':'badge-reddit','Hacker News':'badge-hn','Google Trends':'badge-google','Dev.to':'badge-devto','X Trends':'badge-x','TikTok':'badge-tiktok','Al Jazeera':'badge-aljazeera','SOL Web':'badge-solweb'};
   var cls=map[p]||'badge-devto';
-  var label=p==='X Trends'?'𝕏':p==='Hacker News'?'HN':p==='Al Jazeera'?'AJ':p;
+  var label=p==='X Trends'?'𝕏':p==='Hacker News'?'HN':p==='Al Jazeera'?'AJ':p==='SOL Web'?'◎SOL':p;
   return '<span class="pulse-item-badge '+cls+'">'+label+'</span>';
 }
 /* ── Item cache: store full item data by id so onclick never needs string escaping ── */
@@ -2328,7 +2332,7 @@ function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
 
 function genTweetA(coin,hook,title,meta,platform){
   // Sharp news-to-coin angle — direct statement
-  var src={'Reddit':'Reddit','Google Trends':'Google','Hacker News':'HN','X Trends':'X','Dev.to':'devs','Al Jazeera':'AJ','TikTok':'TikTok'}[platform]||'the internet';
+  var src={'Reddit':'Reddit','Google Trends':'Google','Hacker News':'HN','X Trends':'X','Dev.to':'devs','Al Jazeera':'AJ','TikTok':'TikTok','SOL Web':'the web'}[platform]||'the internet';
   var lines=[
     pick([src+' just handed us the narrative.','The narrative just landed.']),
     '',
@@ -2376,7 +2380,7 @@ function genTweetD(coin,hook,title,meta,platform){
 
 function genTweetE(coin,hook,title,meta,platform){
   // Cold market analyst voice
-  var src={'Reddit':'r/popular is talking about','Google Trends':'google trends flagged','Hacker News':'hacker news surfaced','X Trends':'X trending on','Dev.to':'devs are discussing','Al Jazeera':'AJ reported','TikTok':'TikTok is running'}[platform]||'trending:';
+  var src={'Reddit':'r/popular is talking about','Google Trends':'google trends flagged','Hacker News':'hacker news surfaced','X Trends':'X trending on','Dev.to':'devs are discussing','Al Jazeera':'AJ reported','TikTok':'TikTok is running','SOL Web':'the web is talking about'}[platform]||'trending:';
   return src+' "'+hook+'"\n\nthis is exactly how $'+coin+' narratives start.\n\nnot financial advice. just pattern recognition.\n\nCA: soon 👁️';
 }
 

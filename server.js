@@ -301,6 +301,115 @@ async function fetchTikTok() {
   return [];
 }
 
+// SOL Web: keyword-filtered feed across Google News, HN Algolia, YouTube, crypto RSS
+const SOL_KEYWORDS = ['solana','$sol',' sol ','sol/usd','solana network','solana ecosystem','solana nft','solana defi','solana token','solana blockchain','solana wallet','solana validator','solana dao','sol price','sol pump','sol dump','solana hack','solana exploit','solana upgrade','solana mainnet','solana devnet'];
+function isSolMatch(text){
+  const t=(text||'').toLowerCase();
+  return SOL_KEYWORDS.some(k=>t.includes(k));
+}
+
+async function fetchSolWeb(){
+  const now=Date.now();
+  const results=[];
+
+  // 1. Google News RSS — widest coverage (news sites, blogs, articles)
+  try{
+    const queries=['solana','SOL+crypto'];
+    const rssUrls=queries.map(q=>`https://news.google.com/rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en`);
+    const fetches=await Promise.allSettled(rssUrls.map(u=>fetch(u,{headers:{'User-Agent':CHROME_UA},signal:AbortSignal.timeout(8000)}).then(r=>r.ok?r.text():Promise.reject(r.status))));
+    for(const f of fetches){
+      if(f.status!=='fulfilled')continue;
+      const items=parseXmlItems(f.value,'item');
+      for(const item of items){
+        const title=getTag(item,'title');
+        const link=getTag(item,'link');
+        const pubDate=getTag(item,'pubDate');
+        const source=getTag(item,'source')||'Google News';
+        if(!title||!isSolMatch(title))continue;
+        const seenAt=pubDate?new Date(pubDate).getTime():now;
+        results.push({platform:'SOL Web',title,meta:'📰 '+source,url:link||'https://news.google.com',tags:['sol','news'],score:0,seenAt:isNaN(seenAt)?now:seenAt,lastSeen:now});
+      }
+    }
+    console.log(`SOL Web Google News: ${results.length} items so far`);
+  }catch(e){console.error('SOL Web Google News error:',e.message);}
+
+  // 2. Hacker News Algolia — searches HN for Solana posts
+  try{
+    const hnRes=await fetch('https://hn.algolia.com/api/v1/search?query=solana&tags=story&hitsPerPage=20',{signal:AbortSignal.timeout(8000)});
+    if(hnRes.ok){
+      const hnJson=await hnRes.json();
+      for(const hit of (hnJson.hits||[])){
+        if(!hit.title)continue;
+        const seenAt=hit.created_at?new Date(hit.created_at).getTime():now;
+        results.push({platform:'SOL Web',title:hit.title,meta:`💬 HN · ${hit.points||0} pts · ${hit.num_comments||0} comments`,url:hit.url||`https://news.ycombinator.com/item?id=${hit.objectID}`,tags:['sol','hackernews'],score:(hit.points||0)+(hit.num_comments||0)*2,seenAt:isNaN(seenAt)?now:seenAt,lastSeen:now});
+      }
+    }
+  }catch(e){console.error('SOL Web HN Algolia error:',e.message);}
+
+  // 3. YouTube RSS search feed
+  try{
+    const ytRes=await fetch('https://www.youtube.com/feeds/videos.xml?search_query=solana',{headers:{'User-Agent':CHROME_UA},signal:AbortSignal.timeout(8000)});
+    if(ytRes.ok){
+      const ytXml=await ytRes.text();
+      const entries=parseXmlItems(ytXml,'entry');
+      for(const e of entries){
+        const title=getTag(e,'title')||getTag(e,'media:title');
+        const link=getAttr(e,'link','href')||getTag(e,'link');
+        const published=getTag(e,'published');
+        const author=getTag(e,'name');
+        if(!title)continue;
+        const seenAt=published?new Date(published).getTime():now;
+        results.push({platform:'SOL Web',title,meta:`▶ YouTube · ${author||''}`,url:link||'https://youtube.com',tags:['sol','youtube'],score:0,seenAt:isNaN(seenAt)?now:seenAt,lastSeen:now});
+      }
+    }
+  }catch(e){console.error('SOL Web YouTube error:',e.message);}
+
+  // 4. CoinTelegraph RSS — crypto news
+  try{
+    const ctRes=await fetch('https://cointelegraph.com/rss',{headers:{'User-Agent':CHROME_UA},signal:AbortSignal.timeout(8000)});
+    if(ctRes.ok){
+      const ctXml=await ctRes.text();
+      const items=parseXmlItems(ctXml,'item');
+      for(const item of items){
+        const title=getTag(item,'title');
+        const link=getTag(item,'link');
+        const pubDate=getTag(item,'pubDate');
+        if(!title||!isSolMatch(title))continue;
+        const seenAt=pubDate?new Date(pubDate).getTime():now;
+        results.push({platform:'SOL Web',title,meta:'📡 CoinTelegraph',url:link||'https://cointelegraph.com',tags:['sol','news'],score:0,seenAt:isNaN(seenAt)?now:seenAt,lastSeen:now});
+      }
+    }
+  }catch(e){console.error('SOL Web CoinTelegraph error:',e.message);}
+
+  // 5. Decrypt RSS — crypto news
+  try{
+    const dRes=await fetch('https://decrypt.co/feed',{headers:{'User-Agent':CHROME_UA},signal:AbortSignal.timeout(8000)});
+    if(dRes.ok){
+      const dXml=await dRes.text();
+      const items=parseXmlItems(dXml,'item');
+      for(const item of items){
+        const title=getTag(item,'title');
+        const link=getTag(item,'link');
+        const pubDate=getTag(item,'pubDate');
+        if(!title||!isSolMatch(title))continue;
+        const seenAt=pubDate?new Date(pubDate).getTime():now;
+        results.push({platform:'SOL Web',title,meta:'📡 Decrypt',url:link||'https://decrypt.co',tags:['sol','news'],score:0,seenAt:isNaN(seenAt)?now:seenAt,lastSeen:now});
+      }
+    }
+  }catch(e){console.error('SOL Web Decrypt error:',e.message);}
+
+  // Dedupe by title
+  const seen=new Set();
+  const deduped=results.filter(i=>{
+    const k=i.title.toLowerCase().trim();
+    if(seen.has(k))return false;
+    seen.add(k);
+    return true;
+  });
+  console.log(`SOL Web total: ${deduped.length} items`);
+  return deduped.filter(i=>now-i.seenAt<=H48);
+}
+
 async function fetchAlJazeera() {
   const now = Date.now();
   const feeds = [
@@ -332,10 +441,10 @@ async function fetchAlJazeera() {
 }
 
 async function fetchAll(){
-  const [reddit, google, hn, devto, xtrends, tiktok, aljazeera] = await Promise.all([fetchReddit(), fetchGoogle(), fetchHN(), fetchDevTo(), fetchXTrends(), fetchTikTok(), fetchAlJazeera()]);
-  CACHE.items = merge(CACHE.items, [...reddit, ...google, ...hn, ...devto, ...xtrends, ...tiktok, ...aljazeera]);
+  const [reddit, google, hn, devto, xtrends, tiktok, aljazeera, solweb] = await Promise.all([fetchReddit(), fetchGoogle(), fetchHN(), fetchDevTo(), fetchXTrends(), fetchTikTok(), fetchAlJazeera(), fetchSolWeb()]);
+  CACHE.items = merge(CACHE.items, [...reddit, ...google, ...hn, ...devto, ...xtrends, ...tiktok, ...aljazeera, ...solweb]);
   CACHE.lastFetch = Date.now();
-  const counts = { Reddit: reddit.length, 'Google Trends': google.length, 'Hacker News': hn.length, 'Dev.to': devto.length, 'X Trends': xtrends.length, TikTok: tiktok.length, 'Al Jazeera': aljazeera.length };
+  const counts = { Reddit: reddit.length, 'Google Trends': google.length, 'Hacker News': hn.length, 'Dev.to': devto.length, 'X Trends': xtrends.length, TikTok: tiktok.length, 'Al Jazeera': aljazeera.length, 'SOL Web': solweb.length };
   console.log(`[${new Date().toLocaleTimeString()}] Fetched:`, counts, '| Total cache:', CACHE.items.length);
   saveCacheToDisk();
 }
